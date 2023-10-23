@@ -2,20 +2,25 @@ package org.metadatacenter.nih.ingestor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.metadatacenter.artifacts.model.core.FieldSchemaArtifact;
-import org.metadatacenter.artifacts.model.core.NumericType;
-import org.metadatacenter.artifacts.model.core.TemporalGranularity;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.metadatacenter.artifacts.model.core.*;
+import org.metadatacenter.artifacts.model.core.builders.FieldSchemaArtifactBuilder;
 import org.metadatacenter.artifacts.model.core.builders.ListFieldBuilder;
-import org.metadatacenter.artifacts.model.core.TemporalType;
+import org.metadatacenter.artifacts.model.core.builders.NumericFieldBuilder;
+import org.metadatacenter.artifacts.model.core.builders.TextFieldBuilder;
+import org.metadatacenter.artifacts.model.renderer.JsonSchemaArtifactRenderer;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonKeys;
 import org.metadatacenter.nih.ingestor.exceptions.UnsupportedDataTypeException;
 
+import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.io.IOException;
+import java.util.Optional;
 
 public class NIHCDEConverter {
 
@@ -29,113 +34,99 @@ public class NIHCDEConverter {
         return mapper.readTree(jsonString);
     }
 
-    private static FieldSchemaArtifact convertToCedarArtifact(String inputType,
-                                                              List<String> permissibleValues,
-                                                              String tinyId,
-                                                              String definition,
-                                                              String preferredQuestionText,
-                                                              List<String> designations,
-                                                              String name) throws UnsupportedDataTypeException {
-        FieldSchemaArtifact fieldSchemaArtifact;
+    private static FieldSchemaArtifactBuilder chooseBuilderByDataType(String inputType, List<String> permissibleValues)
+            throws UnsupportedDataTypeException {
         switch (inputType) {
+            case DataTypes.FILE:
+            case DataTypes.EXTERNALLYDEFINED:
             case DataTypes.TEXT:
-                fieldSchemaArtifact = FieldSchemaArtifact.textFieldBuilder().
-                        withName(name).
-                        withJsonSchemaTitle(name).
-                        withDescription(definition).
-                        withJsonSchemaDescription(definition).
-                        withIdentifier(tinyId).
-                        withPreferredLabel(preferredQuestionText).
-                        withAlternateLabels(designations).
-                        build();
-                break;
+                return FieldSchemaArtifact.textFieldBuilder().
+                        withMinLength(2).
+                        withMaxLength(10).
+                        // bug where false will not serialize but true does
+                        withRequiredValue(false);
             case DataTypes.NUMBER:
-                fieldSchemaArtifact = FieldSchemaArtifact.numericFieldBuilder().
-                        // numeric types are not specified in the CDEs
-                        // chose integer after inspecting a few CDEs manually
+                return FieldSchemaArtifact.numericFieldBuilder().
                         withNumericType(NumericType.INTEGER).
-                        withName(name).
-                        withJsonSchemaTitle(name).
-                        withDescription(definition).
-                        withJsonSchemaDescription(definition).
-                        withIdentifier(tinyId).
-                        withPreferredLabel(preferredQuestionText).
-                        withAlternateLabels(designations).
-                        build();
-                break;
+                        withRequiredValue(false);
             case DataTypes.DATE:
-                fieldSchemaArtifact = FieldSchemaArtifact.temporalFieldBuilder().
+                return FieldSchemaArtifact.temporalFieldBuilder().
                         withTemporalType(TemporalType.DATE).
-                        withTemporalGranularity(TemporalGranularity.DAY).
-                        withName(name).
-                        withJsonSchemaTitle(name).
-                        withDescription(definition).
-                        withJsonSchemaDescription(definition).
-                        withIdentifier(tinyId).
-                        withPreferredLabel(preferredQuestionText).
-                        withAlternateLabels(designations).
-                        build();
-                break;
+                        withTemporalGranularity(TemporalGranularity.DAY);
             case DataTypes.TIME:
-                fieldSchemaArtifact = FieldSchemaArtifact.temporalFieldBuilder().
+                return FieldSchemaArtifact.temporalFieldBuilder().
                         withTemporalType(TemporalType.TIME).
                         // assumed minute. nothing in the CDE indicates time granularity.
-                        withTemporalGranularity(TemporalGranularity.MINUTE).
-                        withName(name).
-                        withJsonSchemaTitle(name).
-                        withDescription(definition).
-                        withJsonSchemaDescription(definition).
-                        withIdentifier(tinyId).
-                        withPreferredLabel(preferredQuestionText).
-                        withAlternateLabels(designations).
-                        build();
-                break;
+                        withTemporalGranularity(TemporalGranularity.MINUTE);
             case DataTypes.VALUELIST:
-                ListFieldBuilder builder = FieldSchemaArtifact.listFieldBuilder().
-                        withName(name).
-                        withJsonSchemaTitle(name).
-                        withDescription(definition).
-                        withJsonSchemaDescription(definition).
-                        withIdentifier(tinyId).
-                        withPreferredLabel(preferredQuestionText).
-                        withAlternateLabels(designations);
+                ListFieldBuilder builder = FieldSchemaArtifact.listFieldBuilder();
                 for (String option: permissibleValues) {
                     builder = builder.withOption(option);
                 }
-                fieldSchemaArtifact = builder.build();
-                break;
-            case DataTypes.FILE:
-            case DataTypes.EXTERNALLYDEFINED:
+                return builder;
             default:
-                // should be its own exception for an unknown data type
                 // will not be reached if valid data type is used
                 throw new UnsupportedDataTypeException(inputType);
         }
-        return fieldSchemaArtifact;
+    }
+
+    private static FieldSchemaArtifact convertToCedarArtifact(String inputType,
+                                                              List<String> permissibleValues,
+                                                              String tinyId,
+                                                              Optional<String> definition,
+                                                              String preferredQuestionText,
+                                                              List<String> designations,
+                                                              String name)
+            throws UnsupportedDataTypeException {
+
+        FieldSchemaArtifactBuilder builder = chooseBuilderByDataType(inputType, permissibleValues);
+        if (definition.isPresent()) {
+            builder = builder.withDescription(definition.get());
+        }
+        return builder.withName(name).
+                withIdentifier(tinyId).
+                withPreferredLabel(preferredQuestionText).
+                withAlternateLabels(designations).
+                build();
     }
 
     private static String cleanJsonString(String verbatimString) {
         // delete the leading and ending double quote characters
-        return verbatimString.substring(1, verbatimString.length()-1);
+        // also ensure that those are also the leading and ending characters
+        if (verbatimString.startsWith("\"") && verbatimString.endsWith("\"")) {
+            return verbatimString.substring(1, verbatimString.length()-1);
+        } else {
+            return verbatimString;
+        }
     }
 
     public static void main( String[] args ) throws IOException {
 
-        JsonNode jsonData = readJsonToTree("/Users/jkyu/Projects/CDE_Ingestion/SearchExport.json");
+        String fileName = args[0];
+
+        // URI createdBy = new URI("https://metadatacenter.org/users/e5e2c5fd-03d3-4e5d-9dba-2897e568eaf8");
+
+        // could parse everything into a dataclass instead of handling the JsonTree directly
+        JsonNode jsonData = readJsonToTree(fileName);
+        ArrayList<ObjectNode> jsonArtifacts = new ArrayList<>();
+        JsonSchemaArtifactRenderer jsonSchemaArtifactRenderer = new JsonSchemaArtifactRenderer();
         for (JsonNode item: jsonData) {
             String inputType = cleanJsonString(item.get(JsonKeys.VALUEDOMAIN).get(JsonKeys.DATATYPE).toString());
             String tinyId = cleanJsonString(item.get(JsonKeys.TINYID).toString());
 
+            // String createdBy = cleanJsonString(item.get(JsonKeys.CREATEDBY).get(JsonKeys.USERNAME).toString());
+
             // the definition field is not defined in some CDEs
             // leave this blank by default
-            String definition;
+            Optional<String> definition;
             JsonNode definitionsNode = item.get(JsonKeys.DEFINITIONS);
             if (!definitionsNode.isEmpty()) {
-                definition = cleanJsonString(definitionsNode.get(0).get(JsonKeys.DEFINITION).toString());
+                definition = Optional.of(cleanJsonString(definitionsNode.get(0).get(JsonKeys.DEFINITION).toString()));
             } else {
-                definition = "";
+                definition = Optional.empty();
             }
 
+            // permissibleValues is always a populated field in the JSON, but it can be an empty array
             JsonNode permissibleValuesNode = item.get(JsonKeys.VALUEDOMAIN).get(JsonKeys.PERMISSIBLEVALUES);
             ArrayList<String> permissibleValues = new ArrayList<>();
             for (JsonNode node: permissibleValuesNode) {
@@ -169,10 +160,14 @@ public class NIHCDEConverter {
                         inputType, permissibleValues, tinyId, definition, preferredQuestionText,
                         designations, name
                 );
-                System.out.println(fieldSchemaArtifact);
+                ObjectNode rendering = jsonSchemaArtifactRenderer.renderFieldSchemaArtifact(fieldSchemaArtifact);
+                jsonArtifacts.add(rendering);
             } catch (UnsupportedDataTypeException e) {
                 System.out.println(e);
             }
+        }
+        for (ObjectNode item: jsonArtifacts) {
+            System.out.println(item);
         }
     }
 }
