@@ -13,6 +13,7 @@ public class JsonKeys {
     public static final String DEFINITION = "definition";
     public static final String PERMISSIBLEVALUES = "permissibleValues";
     public static final String PERMISSIBLEVALUE = "permissibleValue";
+    public static final String VALUEMEANINGNAME = "valueMeaningName";
     public static final String DESIGNATIONS = "designations";
     public static final String DESIGNATION = "designation";
     public static final String TAGS = "tags";
