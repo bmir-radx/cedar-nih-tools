@@ -6,13 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metadatacenter.artifacts.model.core.FieldSchemaArtifact;
-import org.metadatacenter.artifacts.model.core.NumericType;
 import org.metadatacenter.artifacts.model.core.TemporalGranularity;
 import org.metadatacenter.artifacts.model.core.TemporalType;
-import org.metadatacenter.artifacts.model.core.builders.FieldSchemaArtifactBuilder;
-import org.metadatacenter.artifacts.model.core.builders.ListFieldBuilder;
+import org.metadatacenter.artifacts.model.core.builders.*;
 import org.metadatacenter.artifacts.model.renderer.JsonSchemaArtifactRenderer;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
+import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
 import org.metadatacenter.nih.ingestor.constants.JsonKeys;
 import org.metadatacenter.nih.ingestor.exceptions.DesignationNotFoundException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidJsonPathException;
@@ -21,6 +20,7 @@ import org.metadatacenter.nih.ingestor.exceptions.UnsupportedDataTypeException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -63,11 +63,11 @@ public class Converter {
     Builds a FieldSchemaArtifact using the cedar-artifact-library using the provided information.
      */
     private FieldSchemaArtifact makeCedarArtifact(String inputType,
-                                                  Optional<CDEConstraints> constraints,
+                                                  CDEConstraints constraints,
                                                   String tinyId,
                                                   Optional<String> definition,
-                                                  String preferredQuestionText,
-                                                  List<String> designations,
+                                                  String preferredLabel,
+                                                  List<String> alternateLabels,
                                                   String name)
             throws UnsupportedDataTypeException {
 
@@ -77,8 +77,8 @@ public class Converter {
         }
         return builder.withName(name).
                 withIdentifier(tinyId).
-                withPreferredLabel(preferredQuestionText).
-                withAlternateLabels(designations).
+                withPreferredLabel(preferredLabel).
+                withAlternateLabels(alternateLabels).
                 build();
     }
 
@@ -86,32 +86,63 @@ public class Converter {
     Select the appropriate builder from the cedar-artifact-library for the
     response datatype specified by the CDE.
      */
-    private FieldSchemaArtifactBuilder chooseBuilderByDataType(String datatype, Optional<CDEConstraints> constraints)
+    private FieldSchemaArtifactBuilder chooseBuilderByDataType(String datatype, CDEConstraints constraints)
             throws UnsupportedDataTypeException {
         switch (datatype) {
             case DataTypes.FILE:
             case DataTypes.EXTERNALLYDEFINED:
             case DataTypes.TEXT:
-                return FieldSchemaArtifact.textFieldBuilder();
+                TextFieldBuilder textBuilder = FieldSchemaArtifact.textFieldBuilder();
+                if (constraints.hasMinLength()) {
+                    textBuilder = textBuilder.withMinLength(constraints.getMinLength());
+                }
+                if (constraints.hasMinLength()) {
+                    textBuilder = textBuilder.withMaxLength(constraints.getMaxLength());
+                }
+                return textBuilder;
             case DataTypes.NUMBER:
-                return FieldSchemaArtifact.numericFieldBuilder().
-                        withNumericType(NumericType.INTEGER);
+                NumericFieldBuilder numBuilder = FieldSchemaArtifact.numericFieldBuilder();
+                if (constraints.hasNumericPrecision()) {
+                    numBuilder = numBuilder.withDecimalPlaces(constraints.getNumericPrecision());
+                }
+                if (constraints.hasNumericType()) {
+                    numBuilder = numBuilder.withNumericType(constraints.getNumericType());
+                }
+                if (constraints.hasMinValue()) {
+                    numBuilder = numBuilder.withMinValue(constraints.getMinValue());
+                }
+                if (constraints.hasMaxValue()) {
+                    numBuilder = numBuilder.withMaxValue(constraints.getMaxValue());
+                }
+                return numBuilder;
             case DataTypes.DATE:
-                return FieldSchemaArtifact.temporalFieldBuilder().
-                        withTemporalType(TemporalType.DATE).
-                        // assumed day. nothing in the CDE indicates date granularity.
-                        withTemporalGranularity(TemporalGranularity.DAY);
+                TemporalFieldBuilder dateBuilder = FieldSchemaArtifact.temporalFieldBuilder().
+                        withTemporalType(TemporalType.DATE);
+                if (constraints.hasDatePrecision()) {
+                    String datePrecision = constraints.getDatePrecision();
+                    if (datePrecision.equals(JsonDatePrecisions.MINUTE)) {
+                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE);
+                    } else {
+                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY);
+                    }
+                } else {
+                    // NIH CDE Repository default is Day
+                    dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY);
+                }
+                return dateBuilder;
             case DataTypes.TIME:
+                // assumed minute. nothing in the CDE indicates time granularity.
                 return FieldSchemaArtifact.temporalFieldBuilder().
                         withTemporalType(TemporalType.TIME).
-                        // assumed minute. nothing in the CDE indicates time granularity.
                         withTemporalGranularity(TemporalGranularity.MINUTE);
             case DataTypes.VALUELIST:
-                ListFieldBuilder builder = FieldSchemaArtifact.listFieldBuilder();
-                // for (String option: constraints.getPermissibleValues()) {
-                //     builder = builder.withOption(option);
-                // }
-                return builder;
+                ListFieldBuilder listFieldBuilder = FieldSchemaArtifact.listFieldBuilder();
+                if (constraints.hasPermissibleValues()) {
+                    for (String value: constraints.getPermissibleValues()) {
+                        listFieldBuilder = listFieldBuilder.withOption(value);
+                    }
+                }
+                return listFieldBuilder;
             default:
                 // will not be reached if valid data type is used
                 throw new UnsupportedDataTypeException(datatype);
@@ -328,113 +359,96 @@ public class Converter {
         return designations.getAlternateLabels().isEmpty() ? designations.getPreferredLabel() : designations.getAlternateLabels().get(0);
     }
 
-    private TextConstraints getTextConstraints(JsonNode headNode) throws InvalidJsonPathException {
-        // check for minLength and maxLength fields
+    private CDEConstraints getTextConstraints(JsonNode headNode) throws InvalidJsonPathException {
+        CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPETEXT)) {
-            return null;
+            return builder.build();
         }
         currentNode = currentNode.get(JsonKeys.DATATYPETEXT);
-        Optional<Integer> minLength;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.MINLENGTH,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPETEXT, JsonKeys.MINLENGTH));
-            minLength = Optional.of(currentNode.get(JsonKeys.MINLENGTH).intValue());
-        } catch (InvalidJsonPathException e) {
-            minLength = Optional.empty();
+
+        if (currentNode.has(JsonKeys.MINLENGTH)) {
+            builder = builder.withMinLength(currentNode.get(JsonKeys.MINLENGTH).intValue());
         }
-        Optional<Integer> maxLength;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.MAXLENGTH,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPETEXT, JsonKeys.MAXLENGTH));
-            maxLength = Optional.of(currentNode.get(JsonKeys.MAXLENGTH).intValue());
-        } catch (InvalidJsonPathException e) {
-            maxLength = Optional.empty();
+        if (currentNode.has(JsonKeys.MAXLENGTH)) {
+            builder = builder.withMaxLength(currentNode.get(JsonKeys.MAXLENGTH).intValue());
         }
-        return new TextConstraints(minLength, maxLength);
+        return builder.build();
     }
 
-    private NumberConstraints getNumberConstraints(JsonNode headNode) {
+    private CDEConstraints getNumberConstraints(JsonNode headNode) {
+        CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPENUMBER)) {
-            return null;
+            return builder.build();
         }
         currentNode = currentNode.get(JsonKeys.DATATYPENUMBER);
-        Optional<Integer> precision;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.PRECISION,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPENUMBER, JsonKeys.PRECISION));
-            precision = Optional.of(currentNode.get(JsonKeys.PRECISION).intValue());
-        } catch (InvalidJsonPathException e) {
-            precision = Optional.empty();
+
+        // if precision is specified and it is not zero, the min/max values must be double
+        if (currentNode.has(JsonKeys.PRECISION)) {
+            Integer precision = currentNode.get(JsonKeys.PRECISION).intValue();
+            builder = builder.withNumericPrecision(precision);
+            if (precision == 0) {
+                if (currentNode.has(JsonKeys.MINVALUE)) {
+                    builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).intValue());
+                }
+                if (currentNode.has(JsonKeys.MAXVALUE)) {
+                    builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).intValue());
+                }
+            } else {
+                if (currentNode.has(JsonKeys.MINVALUE)) {
+                    builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).doubleValue());
+                }
+                if (currentNode.has(JsonKeys.MAXVALUE)) {
+                    builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).doubleValue());
+                }
+            }
+        } else {
+            if (currentNode.has(JsonKeys.MINVALUE)) {
+                builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).intValue());
+            }
+            if (currentNode.has(JsonKeys.MAXVALUE)) {
+                builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).intValue());
+            }
         }
-        Optional<Number> minValue;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.MINVALUE,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPENUMBER, JsonKeys.MINVALUE));
-            if (precision.isPresent()) {
-                minValue = Optional.of(currentNode.get(JsonKeys.MINVALUE).doubleValue());
-            }
-            else {
-                minValue = Optional.of(currentNode.get(JsonKeys.MINVALUE).intValue());
-            }
-        } catch (InvalidJsonPathException e) {
-            minValue = Optional.empty();
-        }
-        Optional<Number> maxValue;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.MAXVALUE,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPENUMBER, JsonKeys.MAXVALUE));
-            if (precision.isPresent()) {
-                maxValue = Optional.of(currentNode.get(JsonKeys.MAXVALUE).doubleValue());
-            }
-            else {
-                maxValue = Optional.of(currentNode.get(JsonKeys.MAXVALUE).intValue());
-            }
-        } catch (InvalidJsonPathException e) {
-            maxValue = Optional.empty();
-        }
-        return new NumberConstraints(minValue, maxValue, precision);
+        return builder.build();
     }
 
-    private DateConstraints getDateConstraints(JsonNode headNode) throws InvalidJsonPathException {
+    private CDEConstraints getDateConstraints(JsonNode headNode) throws InvalidJsonPathException {
+        CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPEDATE)) {
-            return null;
+            return builder.build();
         }
         currentNode = currentNode.get(JsonKeys.DATATYPEDATE);
-        Optional<String> precision;
-        try {
-            checkNodeHasNonNull(currentNode, JsonKeys.PRECISION,
-                    String.format("%s/%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPENUMBER, JsonKeys.PRECISION));
-            precision = Optional.of(currentNode.get(JsonKeys.PRECISION).toString());
-        } catch (InvalidJsonPathException e) {
-            precision = Optional.empty();
+
+        if (currentNode.has(JsonKeys.PRECISION)) {
+            builder = builder.withDatePrecision(nodeToCleanedString(currentNode.get(JsonKeys.PRECISION)));
         }
-        return new DateConstraints(precision);
+        return builder.build();
     }
 
-    private ValueListConstraints getValueListConstraints(JsonNode headNode) throws InvalidJsonPathException {
+    private CDEConstraints getValueListConstraints(JsonNode headNode) throws InvalidJsonPathException {
         ArrayList<String> permissibleValues = getPermissibleValues(headNode);
-        if (permissibleValues.isEmpty()) {
-            return null;
-        } else {
-            return new ValueListConstraints(permissibleValues);
+        CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
+        if (!permissibleValues.isEmpty()) {
+            builder = builder.withPermissibleValues(permissibleValues);
         }
+        return builder.build();
     }
 
-    private Optional<CDEConstraints> getConstraints(JsonNode headNode, String datatype) throws InvalidJsonPathException {
+    private CDEConstraints getConstraints(JsonNode headNode, String datatype) throws InvalidJsonPathException {
         switch (datatype) {
             case DataTypes.VALUELIST:
-                return Optional.ofNullable(getValueListConstraints(headNode));
+                return getValueListConstraints(headNode);
             case DataTypes.NUMBER:
-                return Optional.ofNullable(getNumberConstraints(headNode));
+                return getNumberConstraints(headNode);
             case DataTypes.TEXT:
-                return Optional.ofNullable(getTextConstraints(headNode));
+                return getTextConstraints(headNode);
             case DataTypes.DATE:
-                return Optional.ofNullable(getDateConstraints(headNode));
+                return getDateConstraints(headNode);
             default:
-                return Optional.empty();
+                return new CDEConstraints.CDEConstraintsBuilder().build();
         }
     }
 
@@ -448,7 +462,7 @@ public class Converter {
         for (JsonNode cdeNode: jsonData) {
             String datatype = getDatatype(cdeNode);
             String tinyId = getTinyId(cdeNode);
-            Optional<CDEConstraints> constraints = getConstraints(cdeNode, datatype);
+            CDEConstraints constraints = getConstraints(cdeNode, datatype);
             Optional<String> definition = getDefinition(cdeNode);
             CDEDesignations designations = getDesignations(cdeNode);
             String name = getName(designations);
