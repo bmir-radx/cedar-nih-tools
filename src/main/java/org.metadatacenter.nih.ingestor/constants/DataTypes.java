@@ -7,8 +7,8 @@ public class DataTypes {
     public static final String TEXT = "Text";
     public static final String VALUELIST = "Value List";
     public static final String NUMBER = "Number";
-    public static final String DATE = "Date";
-    public static final String TIME = "Time";
-    public static final String FILE = "File"; // parsed but not supported
-    public static final String EXTERNALLYDEFINED = "Externally Defined"; // parsed but not supported
+    public static final String DATE = "Date"; // these are actually DATETIME types
+    public static final String TIME = "Time"; // Time datatypes are out of date
+    public static final String FILE = "File";
+    public static final String EXTERNALLYDEFINED = "Externally Defined";
 }

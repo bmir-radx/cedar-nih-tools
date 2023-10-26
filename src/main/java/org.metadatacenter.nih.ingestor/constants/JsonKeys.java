@@ -18,6 +18,13 @@ public class JsonKeys {
     public static final String DESIGNATION = "designation";
     public static final String TAGS = "tags";
     public static final String PREFERREDQUESTIONTEXT = "\"Preferred Question Text\"";
-    public static final String CREATEDBY = "createdBy";
-    public static final String USERNAME = "username";
+    public static final String DATATYPETEXT = "datatypeText";
+    public static final String DATATYPENUMBER = "datatypeNumber";
+    public static final String DATATYPEDATE = "datatypeDate";
+    public static final String PRECISION = "precision"; // for DATE (Minute/Day) and NUMBER (num decimal places)
+    public static final String FORMAT = "format"; // for DATE
+    public static final String MINLENGTH = "minLength";
+    public static final String MAXLENGTH = "maxLength";
+    public static final String MINVALUE = "minValue";
+    public static final String MAXVALUE = "maxValue";
 }
