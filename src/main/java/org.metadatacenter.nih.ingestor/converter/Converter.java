@@ -8,7 +8,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metadatacenter.artifacts.model.core.FieldSchemaArtifact;
 import org.metadatacenter.artifacts.model.core.TemporalGranularity;
 import org.metadatacenter.artifacts.model.core.TemporalType;
-import org.metadatacenter.artifacts.model.core.builders.*;
+import org.metadatacenter.artifacts.model.core.builders.FieldSchemaArtifactBuilder;
+import org.metadatacenter.artifacts.model.core.builders.ListFieldBuilder;
+import org.metadatacenter.artifacts.model.core.builders.NumericFieldBuilder;
+import org.metadatacenter.artifacts.model.core.builders.TemporalFieldBuilder;
+import org.metadatacenter.artifacts.model.core.builders.TextFieldBuilder;
 import org.metadatacenter.artifacts.model.renderer.JsonSchemaArtifactRenderer;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
@@ -20,7 +24,6 @@ import org.metadatacenter.nih.ingestor.exceptions.UnsupportedDataTypeException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -116,18 +119,20 @@ public class Converter {
                 }
                 return numBuilder;
             case DataTypes.DATE:
-                TemporalFieldBuilder dateBuilder = FieldSchemaArtifact.temporalFieldBuilder().
-                        withTemporalType(TemporalType.DATE);
+                TemporalFieldBuilder dateBuilder = FieldSchemaArtifact.temporalFieldBuilder();
                 if (constraints.hasDatePrecision()) {
                     String datePrecision = constraints.getDatePrecision();
                     if (datePrecision.equals(JsonDatePrecisions.MINUTE)) {
-                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE);
+                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE).
+                            withTemporalType(TemporalType.DATETIME);
                     } else {
-                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY);
+                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
+                            withTemporalType(TemporalType.DATE);
                     }
                 } else {
                     // NIH CDE Repository default is Day
-                    dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY);
+                    dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
+                        withTemporalType(TemporalType.DATE);
                 }
                 return dateBuilder;
             case DataTypes.TIME:

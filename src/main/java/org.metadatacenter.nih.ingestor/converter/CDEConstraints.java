@@ -144,7 +144,7 @@ public class CDEConstraints {
 
         public CDEConstraints build() {
             NumericType numericType = numericPrecision.isPresent() ?
-                    NumericType.DOUBLE : NumericType.INTEGER;
+                    NumericType.DECIMAL : NumericType.INTEGER;
             return new CDEConstraints(datePrecision, permissibleValues, minLength, maxLength,
                     minValue, maxValue, numericPrecision, Optional.of(numericType));
         }
