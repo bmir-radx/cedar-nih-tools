@@ -244,8 +244,9 @@ public class Converter {
         }
     }
     Note that the "permissibleValue" field is usually an uninformative label if it is
-    accompanied by "valueMeaningName". However, "permissibleValue" should be chosen if
-    it is accompanied by "valueMeaningDefinition" instead.
+    accompanied by "valueMeaningName", so we label it with both the original value
+    and its name. However, "permissibleValue" should be chosen if it is accompanied by
+    "valueMeaningDefinition" instead.
      */
     private ArrayList<String> getPermissibleValues(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.VALUEDOMAIN, JsonKeys.VALUEDOMAIN);
@@ -258,9 +259,10 @@ public class Converter {
         if (!currentNode.isEmpty()) {
             for (int i = 0; i < currentNode.size(); i++) {
                 JsonNode node = currentNode.get(i);
-                // probably don't have to do this check for every permissibleValues node
                 if (node.hasNonNull(JsonKeys.VALUEMEANINGNAME)) {
-                    permissibleValues.add(nodeToCleanedString(node.get(JsonKeys.VALUEMEANINGNAME)));
+                    permissibleValues.add(String.format("%s - %s",
+                            nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE)),
+                            nodeToCleanedString(node.get(JsonKeys.VALUEMEANINGNAME))));
                 } else {
                     checkNodeHasNonNull(node, JsonKeys.PERMISSIBLEVALUE,
                             String.format("%s/%s/%d/%s", JsonKeys.VALUEDOMAIN, JsonKeys.PERMISSIBLEVALUES,
