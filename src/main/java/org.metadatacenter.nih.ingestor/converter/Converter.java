@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -255,19 +256,28 @@ public class Converter {
                 String.format("%s/%s/", JsonKeys.VALUEDOMAIN, JsonKeys.PERMISSIBLEVALUES));
         currentNode = currentNode.get(JsonKeys.PERMISSIBLEVALUES);
 
+        HashSet<String> permissibleValuesSet = new HashSet<>();
         ArrayList<String> permissibleValues = new ArrayList<>();
         if (!currentNode.isEmpty()) {
             for (int i = 0; i < currentNode.size(); i++) {
                 JsonNode node = currentNode.get(i);
                 if (node.hasNonNull(JsonKeys.VALUEMEANINGNAME)) {
-                    permissibleValues.add(String.format("%s - %s",
+                    String permissibleValue = String.format("%s - %s",
                             nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE)),
-                            nodeToCleanedString(node.get(JsonKeys.VALUEMEANINGNAME))));
+                            nodeToCleanedString(node.get(JsonKeys.VALUEMEANINGNAME)));
+                    if (!permissibleValuesSet.contains(permissibleValue)) {
+                        permissibleValuesSet.add(permissibleValue);
+                        permissibleValues.add(permissibleValue);
+                    }
                 } else {
                     checkNodeHasNonNull(node, JsonKeys.PERMISSIBLEVALUE,
                             String.format("%s/%s/%d/%s", JsonKeys.VALUEDOMAIN, JsonKeys.PERMISSIBLEVALUES,
                                     i, JsonKeys.PERMISSIBLEVALUE));
-                    permissibleValues.add(nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE)));
+                    String permissibleValue = nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE));
+                    if (!permissibleValuesSet.contains(permissibleValue)) {
+                        permissibleValuesSet.add(permissibleValue);
+                        permissibleValues.add(permissibleValue);
+                    }
                 }
             }
         }
@@ -325,6 +335,7 @@ public class Converter {
         checkNodeHasNonNull(headNode, JsonKeys.DESIGNATIONS, JsonKeys.DESIGNATIONS);
         JsonNode designationsNode = headNode.get(JsonKeys.DESIGNATIONS);
         Optional<String> preferredLabel = Optional.empty();
+        HashSet<String> alternateLabelsSet = new HashSet<>();
         ArrayList<String> alternateLabels = new ArrayList<>();
         if (designationsNode.isEmpty()) {
             throw new DesignationNotFoundException();
@@ -339,13 +350,21 @@ public class Converter {
                         String.format("%s/%d/%s", JsonKeys.DESIGNATIONS, i, JsonKeys.DESIGNATION));
                 JsonNode designationNode = node.get(JsonKeys.DESIGNATION);
                 if (tagsNode.isEmpty()) {
-                    alternateLabels.add(nodeToCleanedString(designationNode));
+                    String alternateLabel = nodeToCleanedString(designationNode);
+                    if (!alternateLabelsSet.contains(alternateLabel)) {
+                        alternateLabels.add(alternateLabel);
+                        alternateLabelsSet.add(alternateLabel);
+                    }
                 } else {
                     List<String> stuff = stringListReader.readValue(tagsNode);
                     if (stuff.contains(JsonKeys.PREFERREDQUESTIONTEXT)) {
                         preferredLabel = Optional.of(nodeToCleanedString(designationNode));
                     } else {
-                        alternateLabels.add(nodeToCleanedString(designationNode));
+                        String alternateLabel = nodeToCleanedString(designationNode);
+                        if (!alternateLabelsSet.contains(alternateLabel)) {
+                            alternateLabels.add(alternateLabel);
+                            alternateLabelsSet.add(alternateLabel);
+                        }
                     }
                 }
             }
