@@ -52,7 +52,7 @@ public class Converter {
     Strings read in from the .json include the start and end quotation marks.
     This removes those quotation marks.
      */
-    private String nodeToCleanedString(JsonNode node) {
+    protected String nodeToCleanedString(JsonNode node) {
         // delete the leading and ending double quote characters
         // also ensure that those are also the leading and ending characters
         String verbatimString = node.toString();
@@ -191,7 +191,7 @@ public class Converter {
     entered null values in the JSON. The assumption here is that a path must point to
     a Node. Inspecting the exported NIH CDEs shows that there are no {"key": null} pairs.
      */
-    private void checkNodeHasNonNull(JsonNode node, String key, String path) throws InvalidJsonPathException {
+    protected void checkNodeHasNonNull(JsonNode node, String key, String path) throws InvalidJsonPathException {
         if (!node.has(key)) {
             throw new InvalidJsonPathException(path);
         }
@@ -200,7 +200,7 @@ public class Converter {
     /*
     Same as above but for array Nodes.
      */
-    private void checkNodeHasNonNull(JsonNode node, int key, String path) throws InvalidJsonPathException {
+    protected void checkNodeHasNonNull(JsonNode node, int key, String path) throws InvalidJsonPathException {
         if (!node.has(key)) {
             throw new InvalidJsonPathException(path);
         }
@@ -209,7 +209,7 @@ public class Converter {
     /*
     Returns the value at {"valueDomain": {"datatype": "value", ...}}
      */
-    private String getDatatype(JsonNode headNode) throws InvalidJsonPathException {
+    protected String getDatatype(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.VALUEDOMAIN, JsonKeys.VALUEDOMAIN);
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         checkNodeHasNonNull(currentNode, JsonKeys.DATATYPE,
@@ -220,7 +220,7 @@ public class Converter {
     /*
     Returns the value at {"tinyId": "value"}
      */
-    private String getTinyId(JsonNode headNode) throws InvalidJsonPathException {
+    protected String getTinyId(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.TINYID, JsonKeys.TINYID);
         return nodeToCleanedString(headNode.get(JsonKeys.TINYID));
     }
@@ -249,7 +249,7 @@ public class Converter {
     and its name. However, "permissibleValue" should be chosen if it is accompanied by
     "valueMeaningDefinition" instead.
      */
-    private ArrayList<String> getPermissibleValues(JsonNode headNode) throws InvalidJsonPathException {
+    protected ArrayList<String> getPermissibleValues(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.VALUEDOMAIN, JsonKeys.VALUEDOMAIN);
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         checkNodeHasNonNull(currentNode, JsonKeys.PERMISSIBLEVALUES,
@@ -289,7 +289,7 @@ public class Converter {
     Inspecting the NIH CDE JSON file shows that there is at most one definition value despite
     the use of an array. There is sometimes no definition, in which case the array is empty.
      */
-    private Optional<String> getDefinition(JsonNode headNode) throws InvalidJsonPathException {
+    protected Optional<String> getDefinition(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.DEFINITIONS, JsonKeys.DEFINITIONS);
         JsonNode currentNode = headNode.get(JsonKeys.DEFINITIONS);
         if (currentNode.isEmpty()) {
@@ -330,7 +330,7 @@ public class Converter {
     There are also no CDE entries with zero designations. If this is the case,
     we'll throw an error so the user knows to inspect the CDE.
      */
-    private CDEDesignations getDesignations(JsonNode headNode)
+    protected CDEDesignations getDesignations(JsonNode headNode)
             throws IOException, InvalidJsonPathException, DesignationNotFoundException {
         checkNodeHasNonNull(headNode, JsonKeys.DESIGNATIONS, JsonKeys.DESIGNATIONS);
         JsonNode designationsNode = headNode.get(JsonKeys.DESIGNATIONS);
@@ -356,8 +356,8 @@ public class Converter {
                         alternateLabelsSet.add(alternateLabel);
                     }
                 } else {
-                    List<String> stuff = stringListReader.readValue(tagsNode);
-                    if (stuff.contains(JsonKeys.PREFERREDQUESTIONTEXT)) {
+                    List<String> tags = stringListReader.readValue(tagsNode);
+                    if (tags.contains(JsonKeys.PREFERREDQUESTIONTEXT)) {
                         preferredLabel = Optional.of(nodeToCleanedString(designationNode));
                     } else {
                         String alternateLabel = nodeToCleanedString(designationNode);
@@ -381,11 +381,14 @@ public class Converter {
     default to the preferred label. It looks like the preferred label is rarely
     used as the full name of the CDE in the NIH CDE repository.
      */
-    private String getName(CDEDesignations designations) {
+    protected String getName(CDEDesignations designations) {
         return designations.getAlternateLabels().isEmpty() ? designations.getPreferredLabel() : designations.getAlternateLabels().get(0);
     }
 
-    private CDEConstraints getTextConstraints(JsonNode headNode) throws InvalidJsonPathException {
+    /*
+    Parse minLength and maxLength constraints if they are present in the CDE.
+     */
+    private CDEConstraints getTextConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPETEXT)) {
@@ -402,6 +405,9 @@ public class Converter {
         return builder.build();
     }
 
+    /*
+    Parse minValue, maxValue, and precision if they are present in the CDE.
+     */
     private CDEConstraints getNumberConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
@@ -440,7 +446,10 @@ public class Converter {
         return builder.build();
     }
 
-    private CDEConstraints getDateConstraints(JsonNode headNode) throws InvalidJsonPathException {
+    /*
+    Parse the precision of the date specification if present in the CDE.
+     */
+    private CDEConstraints getDateConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPEDATE)) {
@@ -454,6 +463,9 @@ public class Converter {
         return builder.build();
     }
 
+    /*
+    Parse the permissible value options specified by a CDE.
+     */
     private CDEConstraints getValueListConstraints(JsonNode headNode) throws InvalidJsonPathException {
         ArrayList<String> permissibleValues = getPermissibleValues(headNode);
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
@@ -463,6 +475,9 @@ public class Converter {
         return builder.build();
     }
 
+    /*
+    Decide what constraints to read by the datatype of the CDE.
+     */
     private CDEConstraints getConstraints(JsonNode headNode, String datatype) throws InvalidJsonPathException {
         switch (datatype) {
             case DataTypes.VALUELIST:
