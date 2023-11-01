@@ -13,7 +13,7 @@ public class RetryablePosterTest {
     Integer numMaxAttempts = 3;
 
     @Test
-    public void testValidateSuccess() throws Throwable {
+    public void testValidate_success() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doNothing().when(mockPoster).validate(Mockito.any());
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "validate");
@@ -26,7 +26,7 @@ public class RetryablePosterTest {
     }
 
     @Test
-    public void testValidateFailureThenSuccess() throws Throwable {
+    public void testValidate_failureThenSuccess() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doThrow(ConnectException.class)
                 .doThrow(SocketException.class)
@@ -42,7 +42,7 @@ public class RetryablePosterTest {
     }
 
     @Test(expected = ConnectException.class)
-    public void testValidateFailure() throws Throwable {
+    public void testValidate_failure() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doThrow(ConnectException.class).when(mockPoster).validate(Mockito.any());
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "validate");
@@ -55,7 +55,7 @@ public class RetryablePosterTest {
     }
 
     @Test
-    public void testPutSuccess() throws Throwable {
+    public void testPut_success() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doNothing().when(mockPoster).put(Mockito.any());
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "put");
@@ -68,7 +68,7 @@ public class RetryablePosterTest {
     }
 
     @Test
-    public void testPutFailureThenSuccess() throws Throwable {
+    public void testPut_failureThenSuccess() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doThrow(ConnectException.class)
                 .doThrow(SocketException.class)
@@ -84,7 +84,7 @@ public class RetryablePosterTest {
     }
 
     @Test(expected = ConnectException.class)
-    public void testPutFailure() throws Throwable {
+    public void testPut_failure() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
         Mockito.doThrow(ConnectException.class).when(mockPoster).put(Mockito.any());
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "put");

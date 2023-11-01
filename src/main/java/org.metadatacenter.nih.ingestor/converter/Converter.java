@@ -18,6 +18,7 @@ import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
 import org.metadatacenter.nih.ingestor.constants.JsonKeys;
 import org.metadatacenter.nih.ingestor.exceptions.DesignationNotFoundException;
+import org.metadatacenter.nih.ingestor.exceptions.InvalidDatePrecisionException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidJsonPathException;
 import org.metadatacenter.nih.ingestor.exceptions.UnsupportedDataTypeException;
 
@@ -388,7 +389,7 @@ public class Converter {
     /*
     Parse minLength and maxLength constraints if they are present in the CDE.
      */
-    private CDEConstraints getTextConstraints(JsonNode headNode) {
+    protected CDEConstraints getTextConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPETEXT)) {
@@ -408,7 +409,7 @@ public class Converter {
     /*
     Parse minValue, maxValue, and precision if they are present in the CDE.
      */
-    private CDEConstraints getNumberConstraints(JsonNode headNode) {
+    protected CDEConstraints getNumberConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPENUMBER)) {
@@ -420,28 +421,14 @@ public class Converter {
         if (currentNode.has(JsonKeys.PRECISION)) {
             Integer precision = currentNode.get(JsonKeys.PRECISION).intValue();
             builder = builder.withNumericPrecision(precision);
-            if (precision == 0) {
-                if (currentNode.has(JsonKeys.MINVALUE)) {
-                    builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).intValue());
-                }
-                if (currentNode.has(JsonKeys.MAXVALUE)) {
-                    builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).intValue());
-                }
-            } else {
-                if (currentNode.has(JsonKeys.MINVALUE)) {
-                    builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).doubleValue());
-                }
-                if (currentNode.has(JsonKeys.MAXVALUE)) {
-                    builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).doubleValue());
-                }
-            }
-        } else {
-            if (currentNode.has(JsonKeys.MINVALUE)) {
-                builder = builder.withMinValue(currentNode.get(JsonKeys.MINVALUE).intValue());
-            }
-            if (currentNode.has(JsonKeys.MAXVALUE)) {
-                builder = builder.withMinValue(currentNode.get(JsonKeys.MAXVALUE).intValue());
-            }
+        }
+        if (currentNode.has(JsonKeys.MINVALUE)) {
+            Number minValue = currentNode.get(JsonKeys.MINVALUE).numberValue();
+            builder.withMinValue(minValue);
+        }
+        if (currentNode.has(JsonKeys.MAXVALUE)) {
+            Number maxValue = currentNode.get(JsonKeys.MAXVALUE).numberValue();
+            builder.withMaxValue(maxValue);
         }
         return builder.build();
     }
@@ -449,7 +436,7 @@ public class Converter {
     /*
     Parse the precision of the date specification if present in the CDE.
      */
-    private CDEConstraints getDateConstraints(JsonNode headNode) {
+    protected CDEConstraints getDateConstraints(JsonNode headNode) throws InvalidDatePrecisionException {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
         if (!currentNode.has(JsonKeys.DATATYPEDATE)) {
@@ -458,6 +445,10 @@ public class Converter {
         currentNode = currentNode.get(JsonKeys.DATATYPEDATE);
 
         if (currentNode.has(JsonKeys.PRECISION)) {
+            String precision = nodeToCleanedString(currentNode.get(JsonKeys.PRECISION));
+            if (!JsonDatePrecisions.ALLOWEDDATEPRECISIONS.contains(precision)) {
+                throw new InvalidDatePrecisionException(precision);
+            }
             builder = builder.withDatePrecision(nodeToCleanedString(currentNode.get(JsonKeys.PRECISION)));
         }
         return builder.build();
@@ -466,7 +457,7 @@ public class Converter {
     /*
     Parse the permissible value options specified by a CDE.
      */
-    private CDEConstraints getValueListConstraints(JsonNode headNode) throws InvalidJsonPathException {
+    protected CDEConstraints getValueListConstraints(JsonNode headNode) throws InvalidJsonPathException {
         ArrayList<String> permissibleValues = getPermissibleValues(headNode);
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
         if (!permissibleValues.isEmpty()) {
@@ -478,7 +469,7 @@ public class Converter {
     /*
     Decide what constraints to read by the datatype of the CDE.
      */
-    private CDEConstraints getConstraints(JsonNode headNode, String datatype) throws InvalidJsonPathException {
+    protected CDEConstraints getConstraints(JsonNode headNode, String datatype) throws InvalidJsonPathException, InvalidDatePrecisionException {
         switch (datatype) {
             case DataTypes.VALUELIST:
                 return getValueListConstraints(headNode);
@@ -493,37 +484,33 @@ public class Converter {
         }
     }
 
+    protected ObjectNode convertCDEToCedar(JsonNode cdeNode)
+            throws IOException, InvalidJsonPathException, DesignationNotFoundException,
+            InvalidDatePrecisionException, UnsupportedDataTypeException {
+        String datatype = getDatatype(cdeNode);
+        String tinyId = getTinyId(cdeNode);
+        CDEConstraints constraints = getConstraints(cdeNode, datatype);
+        Optional<String> definition = getDefinition(cdeNode);
+        CDEDesignations designations = getDesignations(cdeNode);
+        String name = getName(designations);
+        String preferredLabel = designations.getPreferredLabel();
+        ArrayList<String> alternateLabels = designations.getAlternateLabels();
+
+        FieldSchemaArtifact artifact = makeCedarArtifact(datatype, constraints,
+                tinyId, definition, preferredLabel, alternateLabels, name);
+        return jsonSchemaArtifactRenderer.renderFieldSchemaArtifact(artifact);
+    }
+
     /*
     Read CDEs and populate important fields that can be converted into a CEDAR artifact.
      */
-    private ArrayList<FieldSchemaArtifact> parseCDEFile(String fileName)
-            throws IOException, InvalidJsonPathException, DesignationNotFoundException, UnsupportedDataTypeException {
-        JsonNode jsonData = readJsonToTree(fileName);
-        ArrayList<FieldSchemaArtifact> cedarArtifacts = new ArrayList<>();
-        for (JsonNode cdeNode: jsonData) {
-            String datatype = getDatatype(cdeNode);
-            String tinyId = getTinyId(cdeNode);
-            CDEConstraints constraints = getConstraints(cdeNode, datatype);
-            Optional<String> definition = getDefinition(cdeNode);
-            CDEDesignations designations = getDesignations(cdeNode);
-            String name = getName(designations);
-            String preferredLabel = designations.getPreferredLabel();
-            ArrayList<String> alternateLabels = designations.getAlternateLabels();
-
-            FieldSchemaArtifact fieldSchemaArtifact = makeCedarArtifact(
-                    datatype, constraints, tinyId, definition, preferredLabel,
-                    alternateLabels,name);
-            cedarArtifacts.add(fieldSchemaArtifact);
-        }
-        return cedarArtifacts;
-    }
-
     public ArrayList<ObjectNode> convertCDEsToCEDAR(String filename)
-            throws IOException, InvalidJsonPathException, DesignationNotFoundException, UnsupportedDataTypeException {
-        ArrayList<FieldSchemaArtifact> cedarArtifacts = parseCDEFile(filename);
+            throws IOException, InvalidJsonPathException, DesignationNotFoundException,
+            InvalidDatePrecisionException, UnsupportedDataTypeException {
+        JsonNode jsonData = readJsonToTree(filename);
         ArrayList<ObjectNode> jsonRenders = new ArrayList<>();
-        for (FieldSchemaArtifact artifact: cedarArtifacts) {
-            ObjectNode rendering = jsonSchemaArtifactRenderer.renderFieldSchemaArtifact(artifact);
+        for (JsonNode cdeNode: jsonData) {
+            ObjectNode rendering = convertCDEToCedar(cdeNode);
             jsonRenders.add(rendering);
         }
         return jsonRenders;

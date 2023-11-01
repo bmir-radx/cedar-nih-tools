@@ -3,6 +3,7 @@ package org.metadatacenter.nih.ingestor.converter;
 import org.junit.Before;
 import org.junit.Test;
 import org.metadatacenter.artifacts.model.core.NumericType;
+import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
 
 import java.util.ArrayList;
 
@@ -21,7 +22,7 @@ public class CDEConstraintsTest {
 
     @Test
     public void testBuilder() {
-        String datePrecision = "Day";
+        String datePrecision = JsonDatePrecisions.DAY;
         ArrayList<String> permissibleValues = new ArrayList<>();
         permissibleValues.add("permissibleValue1");
         permissibleValues.add("permissibleValue2");
@@ -66,7 +67,7 @@ public class CDEConstraintsTest {
 
     @Test
     public void testGetDatePrecision() {
-        String datePrecision = "Day";
+        String datePrecision = JsonDatePrecisions.DAY;
         CDEConstraints constraints = builder
                 .withDatePrecision(datePrecision)
                 .build();
@@ -116,7 +117,7 @@ public class CDEConstraintsTest {
     }
 
     @Test
-    public void testGetNumericTypeInteger() {
+    public void testGetNumericType_fromPrecision_integer() {
         Integer numericPrecision = 0;
         CDEConstraints constraints = builder
                 .withNumericPrecision(numericPrecision)
@@ -126,10 +127,62 @@ public class CDEConstraintsTest {
     }
 
     @Test
-    public void testGetNumericTypeDecimal() {
+    public void testGetNumericType_fromPrecision_decimal() {
         Integer numericPrecision = 1;
         CDEConstraints constraints = builder
                 .withNumericPrecision(numericPrecision)
+                .build();
+        assertTrue(constraints.hasNumericType());
+        assertEquals(NumericType.DECIMAL, constraints.getNumericType());
+    }
+
+    @Test
+    public void testGetNumericType_fromLimits_integer() {
+        Number minValue = 1;
+        Number maxValue = 15;
+        CDEConstraints constraints = builder
+                .withMinValue(minValue)
+                .withMaxValue(maxValue)
+                .build();
+        assertTrue(constraints.hasNumericType());
+        assertEquals(NumericType.INTEGER, constraints.getNumericType());
+    }
+
+    @Test
+    public void testGetNumericType_fromLimits_decimal() {
+        Number minValue = 1;
+        Number maxValue = 15.1;
+        CDEConstraints constraints = builder
+                .withMinValue(minValue)
+                .withMaxValue(maxValue)
+                .build();
+        assertTrue(constraints.hasNumericType());
+        assertEquals(NumericType.DECIMAL, constraints.getNumericType());
+    }
+
+    @Test
+    public void testGetNumericType_fromLimitsAndPrecision_integer() {
+        Integer precision = 0;
+        Number minValue = 1;
+        Number maxValue = 15.5;
+        CDEConstraints constraints = builder
+                .withMinValue(minValue)
+                .withMaxValue(maxValue)
+                .withNumericPrecision(precision)
+                .build();
+        assertTrue(constraints.hasNumericType());
+        assertEquals(NumericType.INTEGER, constraints.getNumericType());
+    }
+
+    @Test
+    public void testGetNumericType_fromLimitsAndPrecision_decimal() {
+        Integer precision = 1;
+        Number minValue = 1;
+        Number maxValue = 15.0;
+        CDEConstraints constraints = builder
+                .withMinValue(minValue)
+                .withMaxValue(maxValue)
+                .withNumericPrecision(precision)
                 .build();
         assertTrue(constraints.hasNumericType());
         assertEquals(NumericType.DECIMAL, constraints.getNumericType());

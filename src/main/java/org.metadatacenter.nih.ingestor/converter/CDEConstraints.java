@@ -142,11 +142,28 @@ public class CDEConstraints {
             return this;
         }
 
+        private NumericType determineNumericType() {
+            NumericType numericType;
+            if (numericPrecision.isPresent()) {
+                if (numericPrecision.get() > 0) {
+                    numericType = NumericType.DECIMAL;
+                } else {
+                    numericType = NumericType.INTEGER;
+                }
+            } else {
+                if ((minValue.isPresent() && minValue.get().doubleValue() % 1 != 0) ||
+                        (maxValue.isPresent() && maxValue.get().doubleValue() % 1 != 0)) {
+                    numericType = NumericType.DECIMAL;
+                } else {
+                    numericType = NumericType.INTEGER;
+                }
+            }
+            return numericType;
+        }
+
         public CDEConstraints build() {
-            NumericType numericType = (numericPrecision.isPresent() && (numericPrecision.get() > 0)) ?
-                    NumericType.DECIMAL : NumericType.INTEGER;
             return new CDEConstraints(datePrecision, permissibleValues, minLength, maxLength,
-                    minValue, maxValue, numericPrecision, Optional.of(numericType));
+                    minValue, maxValue, numericPrecision, Optional.of(determineNumericType()));
         }
     }
 }

@@ -36,7 +36,7 @@ public class PosterTest {
     }
 
     @Test(expected = RESTRequestFailedException.class)
-    public void testValidateFailure() throws IOException, RESTRequestFailedException {
+    public void testValidate_failure() throws IOException, RESTRequestFailedException {
         // simulate response to a bad request
         Mockito.doReturn(HttpURLConnection.HTTP_BAD_REQUEST).when(mockConnection).getResponseCode();
 
@@ -49,7 +49,7 @@ public class PosterTest {
     }
 
     @Test
-    public void testValidateSuccess() throws IOException, RESTRequestFailedException {
+    public void testValidate_success() throws IOException, RESTRequestFailedException {
         // simulate a successful request
         Mockito.doReturn(HttpURLConnection.HTTP_OK).when(mockConnection).getResponseCode();
 
@@ -62,7 +62,7 @@ public class PosterTest {
     }
 
     @Test(expected = RESTRequestFailedException.class)
-    public void testPutFailure() throws IOException, RESTRequestFailedException {
+    public void testPut_failure() throws IOException, RESTRequestFailedException {
         // simulate response to a bad request
         Mockito.doReturn(HttpURLConnection.HTTP_BAD_REQUEST).when(mockConnection).getResponseCode();
 
@@ -75,7 +75,7 @@ public class PosterTest {
     }
 
     @Test
-    public void testPutSuccess() throws IOException, RESTRequestFailedException {
+    public void testPut_success() throws IOException, RESTRequestFailedException {
         // simulate response to a successful PUT
         Mockito.doReturn(HttpURLConnection.HTTP_CREATED).when(mockConnection).getResponseCode();
 
