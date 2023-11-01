@@ -7,6 +7,7 @@ import org.metadatacenter.nih.ingestor.exceptions.RESTRequestFailedException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -27,7 +28,7 @@ public class Poster {
         this.urlForPut = new URL(RequestURLs.putURL + folderId);
     }
 
-    private HttpURLConnection createAndOpenConnection(URL urlForRequest) throws IOException {
+    protected HttpURLConnection createAndOpenConnection(URL urlForRequest) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) urlForRequest.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
@@ -46,7 +47,6 @@ public class Poster {
 
         int responseCode = connection.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_OK) {
-            System.out.println(getResponseBody(connection));
             connection.disconnect();
         } else {
             throw new RESTRequestFailedException("POST", responseCode);
@@ -69,10 +69,9 @@ public class Poster {
         }
     }
 
-    private String getResponseBody(HttpURLConnection connection) throws IOException {
+    private String getResponseBody(InputStream inputStream) throws IOException {
         String line;
-        BufferedReader br = new BufferedReader(new InputStreamReader(
-                connection.getInputStream()));
+        BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
         StringBuilder response = new StringBuilder();
         while ((line = br.readLine()) != null)
             response.append(line);

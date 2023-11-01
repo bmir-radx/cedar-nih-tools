@@ -100,7 +100,7 @@ public class Converter {
                 if (constraints.hasMinLength()) {
                     textBuilder = textBuilder.withMinLength(constraints.getMinLength());
                 }
-                if (constraints.hasMinLength()) {
+                if (constraints.hasMaxLength()) {
                     textBuilder = textBuilder.withMaxLength(constraints.getMaxLength());
                 }
                 return textBuilder;

@@ -43,7 +43,7 @@ public class CDEConstraints {
     }
 
     public boolean hasPermissibleValues() {
-        return permissibleValues.isPresent();
+        return permissibleValues.isPresent() && !permissibleValues.get().isEmpty();
     }
 
     public ArrayList<String> getPermissibleValues() {
@@ -143,7 +143,7 @@ public class CDEConstraints {
         }
 
         public CDEConstraints build() {
-            NumericType numericType = numericPrecision.isPresent() ?
+            NumericType numericType = (numericPrecision.isPresent() && (numericPrecision.get() > 0)) ?
                     NumericType.DECIMAL : NumericType.INTEGER;
             return new CDEConstraints(datePrecision, permissibleValues, minLength, maxLength,
                     minValue, maxValue, numericPrecision, Optional.of(numericType));
