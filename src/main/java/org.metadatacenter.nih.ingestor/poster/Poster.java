@@ -15,17 +15,13 @@ import java.net.URL;
 
 public class Poster {
     private String apiKey;
-    private String folderId;
     private URL urlForValidateRequest;
-    private URL urlForPut;
     ObjectMapper mapper = new ObjectMapper();
     final ObjectWriter writer = mapper.writer();
 
-    public Poster(String apiKey, String folderId) throws IOException {
+    public Poster(String apiKey) throws IOException {
         this.apiKey = apiKey;
-        this.folderId = folderId;
         this.urlForValidateRequest = new URL(RequestURLs.validateURL);
-        this.urlForPut = new URL(RequestURLs.putURL + folderId);
     }
 
     protected HttpURLConnection createAndOpenConnection(URL urlForRequest) throws IOException {
@@ -53,7 +49,8 @@ public class Poster {
         }
     }
 
-    public void put(ObjectNode cde) throws IOException, RESTRequestFailedException {
+    public void put(ObjectNode cde, String folderId) throws IOException, RESTRequestFailedException {
+        URL urlForPut = new URL(RequestURLs.putURL + folderId);
         HttpURLConnection connection = createAndOpenConnection(urlForPut);
         OutputStream os = connection.getOutputStream();
         byte[] cdeBytes = writer.writeValueAsBytes(cde);

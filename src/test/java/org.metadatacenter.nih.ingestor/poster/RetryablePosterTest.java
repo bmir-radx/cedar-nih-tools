@@ -11,6 +11,7 @@ import java.net.SocketException;
 public class RetryablePosterTest {
     ObjectMapper mapper = new ObjectMapper();
     Integer numMaxAttempts = 3;
+    String folderId = "dummyFolderId";
 
     @Test
     public void testValidate_success() throws Throwable {
@@ -57,14 +58,14 @@ public class RetryablePosterTest {
     @Test
     public void testPut_success() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
-        Mockito.doNothing().when(mockPoster).put(Mockito.any());
+        Mockito.doNothing().when(mockPoster).put(Mockito.any(), Mockito.eq(folderId));
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "put");
 
         ObjectNode node = mapper.createObjectNode();
-        retryablePoster.put(node);
+        retryablePoster.put(node, folderId);
 
         // succeed on first try
-        Mockito.verify(mockPoster, Mockito.times(1)).put(node);
+        Mockito.verify(mockPoster, Mockito.times(1)).put(node, folderId);
     }
 
     @Test
@@ -73,26 +74,26 @@ public class RetryablePosterTest {
         Mockito.doThrow(ConnectException.class)
                 .doThrow(SocketException.class)
                 .doNothing()
-                .when(mockPoster).put(Mockito.any());
+                .when(mockPoster).put(Mockito.any(), Mockito.eq(folderId));
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "put");
 
         ObjectNode node = mapper.createObjectNode();
-        retryablePoster.put(node);
+        retryablePoster.put(node, folderId);
 
         // fail twice and then succeed
-        Mockito.verify(mockPoster, Mockito.times(3)).put(node);
+        Mockito.verify(mockPoster, Mockito.times(3)).put(node, folderId);
     }
 
     @Test(expected = ConnectException.class)
     public void testPut_failure() throws Throwable {
         Poster mockPoster = Mockito.mock(Poster.class);
-        Mockito.doThrow(ConnectException.class).when(mockPoster).put(Mockito.any());
+        Mockito.doThrow(ConnectException.class).when(mockPoster).put(Mockito.any(), Mockito.eq(folderId));
         RetryablePoster retryablePoster = new RetryablePoster(mockPoster, "put");
 
         ObjectNode node = mapper.createObjectNode();
-        retryablePoster.put(node);
+        retryablePoster.put(node, folderId);
 
         // fail until out of attempts
-        Mockito.verify(mockPoster, Mockito.times(numMaxAttempts)).put(node);
+        Mockito.verify(mockPoster, Mockito.times(numMaxAttempts)).put(node, folderId);
     }
 }

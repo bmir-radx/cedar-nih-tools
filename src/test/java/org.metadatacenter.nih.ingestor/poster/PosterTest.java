@@ -31,7 +31,7 @@ public class PosterTest {
         Mockito.doReturn(mockOutputStream).when(mockConnection).getOutputStream();
         Mockito.doNothing().when(mockConnection).disconnect();
 
-        spyPoster = Mockito.spy(new Poster(apiKey, folderId));
+        spyPoster = Mockito.spy(new Poster(apiKey));
         Mockito.doReturn(mockConnection).when(spyPoster).createAndOpenConnection(Mockito.any());
     }
 
@@ -67,7 +67,7 @@ public class PosterTest {
         Mockito.doReturn(HttpURLConnection.HTTP_BAD_REQUEST).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.put(node);
+        spyPoster.put(node, folderId);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();
@@ -80,7 +80,7 @@ public class PosterTest {
         Mockito.doReturn(HttpURLConnection.HTTP_CREATED).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.put(node);
+        spyPoster.put(node, folderId);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();

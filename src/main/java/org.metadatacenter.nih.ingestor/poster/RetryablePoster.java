@@ -32,8 +32,8 @@ public class RetryablePoster {
         retryingValidator.run();
     }
 
-    public void put(ObjectNode cde) throws Throwable {
-        CheckedRunnable put = () -> poster.put(cde);
+    public void put(ObjectNode cde, String targetFolder) throws Throwable {
+        CheckedRunnable put = () -> poster.put(cde, targetFolder);
         CheckedRunnable retryingValidator = Retry.decorateCheckedRunnable(retry, put);
         retryingValidator.run();
     }
