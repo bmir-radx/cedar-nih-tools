@@ -31,8 +31,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
-import static org.apache.commons.text.StringEscapeUtils.unescapeJson;
-
 public class Converter {
     ObjectMapper mapper = new ObjectMapper();
     ObjectReader stringListReader = mapper.readerFor(new TypeReference<List<String>>() {});
@@ -86,7 +84,7 @@ public class Converter {
         }
         return builder.withName(name).
                 withIdentifier(tinyId).
-                withVersion(version).
+                // withVersion(version).
                 withPreferredLabel(preferredLabel).
                 withAlternateLabels(alternateLabels).
                 build();

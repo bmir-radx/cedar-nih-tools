@@ -59,23 +59,53 @@ public class HttpRequester {
         }
     }
 
-    public void deleteItems(String itemURLPrefix, List<String> itemIds) throws IOException, RESTRequestFailedException {
-        for (String itemId: itemIds) {
-            deleteSingleItem(itemURLPrefix, itemId);
+    public void deleteArtifacts(String artifactURLPrefix, List<String> artifactIds) throws IOException, RESTRequestFailedException {
+        for (String artifactId: artifactIds) {
+            deleteSingleArtifact(artifactURLPrefix, artifactId);
         }
     }
 
-    public void deleteSingleItem(String itemURLPrefix, String itemId) throws IOException, RESTRequestFailedException {
-        String encodedItemId = URLEncoder.encode(itemId, StandardCharsets.UTF_8.toString());
-        URL urlForDelete = new URL(itemURLPrefix + encodedItemId);
-        System.out.println("Deleting: " + itemId);
+    public void deleteSingleArtifact(String artifactURLPrefix, String artifactId) throws IOException, RESTRequestFailedException {
+        String encodedItemId = URLEncoder.encode(artifactId, StandardCharsets.UTF_8.toString());
+        URL urlForDelete = new URL(artifactURLPrefix + encodedItemId);
+        System.out.println("Deleting: " + artifactId);
         HttpURLConnection connection = createAndOpenConnection(urlForDelete, HttpRequestConstants.DELETE);
         int responseCode = connection.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
             connection.disconnect();
-            System.out.println("Deleted: " + itemId);
+            System.out.println("Deleted: " + artifactId);
         } else {
             throw new RESTRequestFailedException(HttpRequestConstants.DELETE, responseCode);
+        }
+    }
+
+    public void publishArtifacts(List<String> artifactIds) throws IOException, RESTRequestFailedException {
+        for (String artifactId: artifactIds) {
+            publishSingleArtifact(artifactId);
+        }
+    }
+
+    /*
+    Default to publishing as 1.0.0. This should be reviewed.
+     */
+    public void publishSingleArtifact(String artifactId) throws IOException, RESTRequestFailedException {
+        HttpURLConnection connection = createAndOpenConnection(
+                new URL(RequestURLPrefixes.publishURL), HttpRequestConstants.POST);
+        System.out.println("Publishing: " + artifactId);
+        String requestBody = String.format("{\"@id\": \"%s\", \"newVersion\": \"1.0.0\"}", artifactId);
+        JsonNode node = mapper.readTree(requestBody);
+        System.out.println(node);
+        OutputStream os = connection.getOutputStream();
+        byte[] requestBytes = writer.writeValueAsBytes(node);
+        os.write(requestBytes);
+        os.flush();
+        os.close();
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            connection.disconnect();
+            System.out.println("Published: " + artifactId);
+        } else {
+            throw new RESTRequestFailedException(HttpRequestConstants.POST, responseCode);
         }
     }
 

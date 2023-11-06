@@ -54,8 +54,8 @@ public class NIHCDEConverter implements Callable<Integer> {
         }
     }
 
-    @CommandLine.Command(name = "delete", description = "Recursively delete fields and sub-folders and the folder itself given a folder ID.")
-    public void delete(
+    @CommandLine.Command(name = "delete-folder", description = "Recursively delete fields and sub-folders and the folder itself given a folder ID.")
+    public void deleteFolder(
             @CommandLine.Option(names = {"-a", "--apiKey"}, description = "CEDAR API key")
             String apiKey,
             @CommandLine.Option(names = {"-t", "--targetFolder"}, description = "CEDAR Folder ID to recursively search")
@@ -69,7 +69,46 @@ public class NIHCDEConverter implements Callable<Integer> {
         System.out.println("Fields: " + fields);
         System.out.println("Number of Fields: " + fields.size());
         // delete them all
-        httpRequester.deleteItems(RequestURLPrefixes.fieldURL, fields);
+        httpRequester.deleteArtifacts(RequestURLPrefixes.fieldURL, fields);
+    }
+
+    @CommandLine.Command(name = "delete", description = "Recursively delete a single field in CEDAR.")
+    public void delete(
+            @CommandLine.Option(names = {"-a", "--apiKey"}, description = "CEDAR API key")
+            String apiKey,
+            @CommandLine.Option(names = {"-i", "--fieldId"}, description = "CEDAR field to delete")
+            String fieldId
+    ) throws Throwable {
+        HttpRequester httpRequester = new HttpRequester(apiKey);
+        httpRequester.deleteSingleArtifact(RequestURLPrefixes.fieldURL, fieldId);
+    }
+
+    @CommandLine.Command(name = "publish-folder", description = "Publish all fields in a folder.")
+    public void publishFolder(
+            @CommandLine.Option(names = {"-a", "--apiKey"}, description = "CEDAR API key")
+            String apiKey,
+            @CommandLine.Option(names = {"-t", "--targetFolder"}, description = "CEDAR Folder ID to recursively search")
+            String targetFolder
+    ) throws Throwable {
+        HttpRequester httpRequester = new HttpRequester(apiKey);
+        // find all the things that need deletion
+        ArrayList<String> folders = httpRequester.findFolders(targetFolder);
+        ArrayList<String> fields = httpRequester.findFields(folders);
+        System.out.println("Fields: " + fields);
+        System.out.println("Number of Fields: " + fields.size());
+        // delete them all
+        httpRequester.publishArtifacts(fields);
+    }
+
+    @CommandLine.Command(name = "publish", description = "Publish a field.")
+    public void publish(
+            @CommandLine.Option(names = {"-a", "--apiKey"}, description = "CEDAR API key")
+            String apiKey,
+            @CommandLine.Option(names = {"-i", "--fieldId"}, description = "CEDAR field to publish")
+            String fieldId
+    ) throws Throwable {
+        HttpRequester httpRequester = new HttpRequester(apiKey);
+        httpRequester.publishSingleArtifact(fieldId);
     }
 
     @Override
