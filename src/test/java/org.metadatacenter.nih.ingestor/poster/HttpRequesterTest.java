@@ -11,14 +11,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 
-public class PosterTest {
+public class HttpRequesterTest {
 
     String apiKey = "dummyApiKey";
     String folderId = "dummyFolderId";
     ObjectMapper mapper = new ObjectMapper();
     OutputStream mockOutputStream;
     HttpURLConnection mockConnection;
-    Poster spyPoster;
+    HttpRequester spyHttpRequester;
 
     @Before
     public void setUp() throws IOException {
@@ -31,8 +31,8 @@ public class PosterTest {
         Mockito.doReturn(mockOutputStream).when(mockConnection).getOutputStream();
         Mockito.doNothing().when(mockConnection).disconnect();
 
-        spyPoster = Mockito.spy(new Poster(apiKey));
-        Mockito.doReturn(mockConnection).when(spyPoster).createAndOpenConnection(Mockito.any());
+        spyHttpRequester = Mockito.spy(new HttpRequester(apiKey));
+        Mockito.doReturn(mockConnection).when(spyHttpRequester).createAndOpenConnection(Mockito.any(), Mockito.anyString());
     }
 
     @Test(expected = RESTRequestFailedException.class)
@@ -41,7 +41,7 @@ public class PosterTest {
         Mockito.doReturn(HttpURLConnection.HTTP_BAD_REQUEST).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.validate(node);
+        spyHttpRequester.validate(node);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();
@@ -54,7 +54,7 @@ public class PosterTest {
         Mockito.doReturn(HttpURLConnection.HTTP_OK).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.validate(node);
+        spyHttpRequester.validate(node);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();
@@ -62,12 +62,12 @@ public class PosterTest {
     }
 
     @Test(expected = RESTRequestFailedException.class)
-    public void testPut_failure() throws IOException, RESTRequestFailedException {
+    public void testUploadDraft_failure() throws IOException, RESTRequestFailedException {
         // simulate response to a bad request
         Mockito.doReturn(HttpURLConnection.HTTP_BAD_REQUEST).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.put(node, folderId);
+        spyHttpRequester.uploadDraft(node, folderId);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();
@@ -75,12 +75,12 @@ public class PosterTest {
     }
 
     @Test
-    public void testPut_success() throws IOException, RESTRequestFailedException {
+    public void testUploadDraft_success() throws IOException, RESTRequestFailedException {
         // simulate response to a successful PUT
         Mockito.doReturn(HttpURLConnection.HTTP_CREATED).when(mockConnection).getResponseCode();
 
         ObjectNode node = mapper.createObjectNode();
-        spyPoster.put(node, folderId);
+        spyHttpRequester.uploadDraft(node, folderId);
 
         Mockito.verify(mockConnection, Mockito.times(1)).getOutputStream();
         Mockito.verify(mockConnection, Mockito.times(1)).getResponseCode();

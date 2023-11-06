@@ -10,7 +10,7 @@ import java.net.ConnectException;
 import java.net.SocketException;
 import java.time.Duration;
 
-public class RetryablePoster {
+public class RetryableRequester {
     private RetryConfig retryConfig = RetryConfig.custom()
             .maxAttempts(3)
             .waitDuration(Duration.ofMillis(2000))
@@ -19,21 +19,21 @@ public class RetryablePoster {
             .build();
     private RetryRegistry retryRegistry = RetryRegistry.of(retryConfig);
     private Retry retry;
-    private Poster poster;
+    private HttpRequester httpRequester;
 
-    public RetryablePoster(Poster poster, String name) {
-        this.poster = poster;
+    public RetryableRequester(HttpRequester httpRequester, String name) {
+        this.httpRequester = httpRequester;
         this.retry = retryRegistry.retry(name, retryConfig);
     }
 
     public void validate(ObjectNode cde) throws Throwable {
-        CheckedRunnable validator = () -> poster.validate(cde);
+        CheckedRunnable validator = () -> httpRequester.validate(cde);
         CheckedRunnable retryingValidator = Retry.decorateCheckedRunnable(retry, validator);
         retryingValidator.run();
     }
 
     public void put(ObjectNode cde, String targetFolder) throws Throwable {
-        CheckedRunnable put = () -> poster.put(cde, targetFolder);
+        CheckedRunnable put = () -> httpRequester.uploadDraft(cde, targetFolder);
         CheckedRunnable retryingValidator = Retry.decorateCheckedRunnable(retry, put);
         retryingValidator.run();
     }

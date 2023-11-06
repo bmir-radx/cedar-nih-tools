@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metadatacenter.artifacts.model.core.FieldSchemaArtifact;
 import org.metadatacenter.artifacts.model.core.TemporalGranularity;
 import org.metadatacenter.artifacts.model.core.TemporalType;
+import org.metadatacenter.artifacts.model.core.Version;
 import org.metadatacenter.artifacts.model.core.builders.FieldSchemaArtifactBuilder;
 import org.metadatacenter.artifacts.model.core.builders.ListFieldBuilder;
 import org.metadatacenter.artifacts.model.core.builders.NumericFieldBuilder;
@@ -29,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+
+import static org.apache.commons.text.StringEscapeUtils.unescapeJson;
 
 public class Converter {
     ObjectMapper mapper = new ObjectMapper();
@@ -70,6 +73,7 @@ public class Converter {
     private FieldSchemaArtifact makeCedarArtifact(String inputType,
                                                   CDEConstraints constraints,
                                                   String tinyId,
+                                                  Version version,
                                                   Optional<String> definition,
                                                   String preferredLabel,
                                                   List<String> alternateLabels,
@@ -82,6 +86,7 @@ public class Converter {
         }
         return builder.withName(name).
                 withIdentifier(tinyId).
+                withVersion(version).
                 withPreferredLabel(preferredLabel).
                 withAlternateLabels(alternateLabels).
                 build();
@@ -224,6 +229,16 @@ public class Converter {
     protected String getTinyId(JsonNode headNode) throws InvalidJsonPathException {
         checkNodeHasNonNull(headNode, JsonKeys.TINYID, JsonKeys.TINYID);
         return nodeToCleanedString(headNode.get(JsonKeys.TINYID));
+    }
+
+    /*
+    Returns the value at {"__v": value}
+    The __v value is just an integer, so the minor and patch numbers are taken to be 0.
+     */
+    protected Version getVersion(JsonNode headNode) throws InvalidJsonPathException {
+        checkNodeHasNonNull(headNode, JsonKeys.VERSION, JsonKeys.VERSION);
+        int version = headNode.get(JsonKeys.VERSION).intValue();
+        return new Version(version, 0, 0);
     }
 
     /*
@@ -489,6 +504,7 @@ public class Converter {
             InvalidDatePrecisionException, UnsupportedDataTypeException {
         String datatype = getDatatype(cdeNode);
         String tinyId = getTinyId(cdeNode);
+        Version version = getVersion(cdeNode);
         CDEConstraints constraints = getConstraints(cdeNode, datatype);
         Optional<String> definition = getDefinition(cdeNode);
         CDEDesignations designations = getDesignations(cdeNode);
@@ -497,7 +513,7 @@ public class Converter {
         ArrayList<String> alternateLabels = designations.getAlternateLabels();
 
         FieldSchemaArtifact artifact = makeCedarArtifact(datatype, constraints,
-                tinyId, definition, preferredLabel, alternateLabels, name);
+                tinyId, version, definition, preferredLabel, alternateLabels, name);
         return jsonSchemaArtifactRenderer.renderFieldSchemaArtifact(artifact);
     }
 

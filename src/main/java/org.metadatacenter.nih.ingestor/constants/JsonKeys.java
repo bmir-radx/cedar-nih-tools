@@ -9,6 +9,7 @@ public class JsonKeys {
     public static final String VALUEDOMAIN = "valueDomain";
     public static final String DATATYPE = "datatype";
     public static final String TINYID = "tinyId";
+    public static final String VERSION = "__v";
     public static final String DEFINITIONS = "definitions";
     public static final String DEFINITION = "definition";
     public static final String PERMISSIBLEVALUES = "permissibleValues";
@@ -27,4 +28,10 @@ public class JsonKeys {
     public static final String MAXLENGTH = "maxLength";
     public static final String MINVALUE = "minValue";
     public static final String MAXVALUE = "maxValue";
+
+    // constants for CEDAR json fields
+    public static final String ID = "@id";
+
+    // constants for REST response
+    public static final String RESOURCES = "resources";
 }
