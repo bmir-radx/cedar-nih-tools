@@ -17,7 +17,7 @@ import org.metadatacenter.artifacts.model.core.builders.TextFieldBuilder;
 import org.metadatacenter.artifacts.model.renderer.JsonSchemaArtifactRenderer;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
-import org.metadatacenter.nih.ingestor.constants.JsonKeys;
+import org.metadatacenter.nih.ingestor.constants.NIHJsonKeys;
 import org.metadatacenter.nih.ingestor.exceptions.DesignationNotFoundException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidDatePrecisionException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidJsonPathException;
@@ -214,19 +214,19 @@ public class Converter {
     Returns the value at {"valueDomain": {"datatype": "value", ...}}
      */
     protected String getDatatype(JsonNode headNode) throws InvalidJsonPathException {
-        checkNodeHasNonNull(headNode, JsonKeys.VALUEDOMAIN, JsonKeys.VALUEDOMAIN);
-        JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
-        checkNodeHasNonNull(currentNode, JsonKeys.DATATYPE,
-                String.format("%s/%s", JsonKeys.VALUEDOMAIN, JsonKeys.DATATYPE));
-        return nodeToCleanedString(currentNode.get(JsonKeys.DATATYPE));
+        checkNodeHasNonNull(headNode, NIHJsonKeys.VALUEDOMAIN, NIHJsonKeys.VALUEDOMAIN);
+        JsonNode currentNode = headNode.get(NIHJsonKeys.VALUEDOMAIN);
+        checkNodeHasNonNull(currentNode, NIHJsonKeys.DATATYPE,
+                String.format("%s/%s", NIHJsonKeys.VALUEDOMAIN, NIHJsonKeys.DATATYPE));
+        return nodeToCleanedString(currentNode.get(NIHJsonKeys.DATATYPE));
     }
 
     /*
     Returns the value at {"tinyId": "value"}
      */
     protected String getTinyId(JsonNode headNode) throws InvalidJsonPathException {
-        checkNodeHasNonNull(headNode, JsonKeys.TINYID, JsonKeys.TINYID);
-        return nodeToCleanedString(headNode.get(JsonKeys.TINYID));
+        checkNodeHasNonNull(headNode, NIHJsonKeys.TINYID, NIHJsonKeys.TINYID);
+        return nodeToCleanedString(headNode.get(NIHJsonKeys.TINYID));
     }
 
     /*
@@ -234,8 +234,8 @@ public class Converter {
     The __v value is just an integer, so the minor and patch numbers are taken to be 0.
      */
     protected Version getVersion(JsonNode headNode) throws InvalidJsonPathException {
-        checkNodeHasNonNull(headNode, JsonKeys.VERSION, JsonKeys.VERSION);
-        int version = headNode.get(JsonKeys.VERSION).intValue();
+        checkNodeHasNonNull(headNode, NIHJsonKeys.VERSION, NIHJsonKeys.VERSION);
+        int version = headNode.get(NIHJsonKeys.VERSION).intValue();
         return new Version(version, 0, 0);
     }
 
@@ -264,30 +264,30 @@ public class Converter {
     "valueMeaningDefinition" instead.
      */
     protected ArrayList<String> getPermissibleValues(JsonNode headNode) throws InvalidJsonPathException {
-        checkNodeHasNonNull(headNode, JsonKeys.VALUEDOMAIN, JsonKeys.VALUEDOMAIN);
-        JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
-        checkNodeHasNonNull(currentNode, JsonKeys.PERMISSIBLEVALUES,
-                String.format("%s/%s/", JsonKeys.VALUEDOMAIN, JsonKeys.PERMISSIBLEVALUES));
-        currentNode = currentNode.get(JsonKeys.PERMISSIBLEVALUES);
+        checkNodeHasNonNull(headNode, NIHJsonKeys.VALUEDOMAIN, NIHJsonKeys.VALUEDOMAIN);
+        JsonNode currentNode = headNode.get(NIHJsonKeys.VALUEDOMAIN);
+        checkNodeHasNonNull(currentNode, NIHJsonKeys.PERMISSIBLEVALUES,
+                String.format("%s/%s/", NIHJsonKeys.VALUEDOMAIN, NIHJsonKeys.PERMISSIBLEVALUES));
+        currentNode = currentNode.get(NIHJsonKeys.PERMISSIBLEVALUES);
 
         HashSet<String> permissibleValuesSet = new HashSet<>();
         ArrayList<String> permissibleValues = new ArrayList<>();
         if (!currentNode.isEmpty()) {
             for (int i = 0; i < currentNode.size(); i++) {
                 JsonNode node = currentNode.get(i);
-                if (node.hasNonNull(JsonKeys.VALUEMEANINGNAME)) {
+                if (node.hasNonNull(NIHJsonKeys.VALUEMEANINGNAME)) {
                     String permissibleValue = String.format("%s - %s",
-                            nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE)),
-                            nodeToCleanedString(node.get(JsonKeys.VALUEMEANINGNAME)));
+                            nodeToCleanedString(node.get(NIHJsonKeys.PERMISSIBLEVALUE)),
+                            nodeToCleanedString(node.get(NIHJsonKeys.VALUEMEANINGNAME)));
                     if (!permissibleValuesSet.contains(permissibleValue)) {
                         permissibleValuesSet.add(permissibleValue);
                         permissibleValues.add(permissibleValue);
                     }
                 } else {
-                    checkNodeHasNonNull(node, JsonKeys.PERMISSIBLEVALUE,
-                            String.format("%s/%s/%d/%s", JsonKeys.VALUEDOMAIN, JsonKeys.PERMISSIBLEVALUES,
-                                    i, JsonKeys.PERMISSIBLEVALUE));
-                    String permissibleValue = nodeToCleanedString(node.get(JsonKeys.PERMISSIBLEVALUE));
+                    checkNodeHasNonNull(node, NIHJsonKeys.PERMISSIBLEVALUE,
+                            String.format("%s/%s/%d/%s", NIHJsonKeys.VALUEDOMAIN, NIHJsonKeys.PERMISSIBLEVALUES,
+                                    i, NIHJsonKeys.PERMISSIBLEVALUE));
+                    String permissibleValue = nodeToCleanedString(node.get(NIHJsonKeys.PERMISSIBLEVALUE));
                     if (!permissibleValuesSet.contains(permissibleValue)) {
                         permissibleValuesSet.add(permissibleValue);
                         permissibleValues.add(permissibleValue);
@@ -304,17 +304,17 @@ public class Converter {
     the use of an array. There is sometimes no definition, in which case the array is empty.
      */
     protected Optional<String> getDefinition(JsonNode headNode) throws InvalidJsonPathException {
-        checkNodeHasNonNull(headNode, JsonKeys.DEFINITIONS, JsonKeys.DEFINITIONS);
-        JsonNode currentNode = headNode.get(JsonKeys.DEFINITIONS);
+        checkNodeHasNonNull(headNode, NIHJsonKeys.DEFINITIONS, NIHJsonKeys.DEFINITIONS);
+        JsonNode currentNode = headNode.get(NIHJsonKeys.DEFINITIONS);
         if (currentNode.isEmpty()) {
             return Optional.empty();
         } else {
             // check only first index in the array
-            checkNodeHasNonNull(currentNode, 0, String.format("%s/%d", JsonKeys.DEFINITION, 0));
+            checkNodeHasNonNull(currentNode, 0, String.format("%s/%d", NIHJsonKeys.DEFINITION, 0));
             currentNode = currentNode.get(0);
-            checkNodeHasNonNull(currentNode, JsonKeys.DEFINITION,
-                    String.format("%s/%d/%s", JsonKeys.DEFINITIONS, 0, JsonKeys.DEFINITION));
-            return Optional.of(nodeToCleanedString(currentNode.get(JsonKeys.DEFINITION)));
+            checkNodeHasNonNull(currentNode, NIHJsonKeys.DEFINITION,
+                    String.format("%s/%d/%s", NIHJsonKeys.DEFINITIONS, 0, NIHJsonKeys.DEFINITION));
+            return Optional.of(nodeToCleanedString(currentNode.get(NIHJsonKeys.DEFINITION)));
         }
     }
 
@@ -346,8 +346,8 @@ public class Converter {
      */
     protected CDEDesignations getDesignations(JsonNode headNode)
             throws IOException, InvalidJsonPathException, DesignationNotFoundException {
-        checkNodeHasNonNull(headNode, JsonKeys.DESIGNATIONS, JsonKeys.DESIGNATIONS);
-        JsonNode designationsNode = headNode.get(JsonKeys.DESIGNATIONS);
+        checkNodeHasNonNull(headNode, NIHJsonKeys.DESIGNATIONS, NIHJsonKeys.DESIGNATIONS);
+        JsonNode designationsNode = headNode.get(NIHJsonKeys.DESIGNATIONS);
         Optional<String> preferredLabel = Optional.empty();
         HashSet<String> alternateLabelsSet = new HashSet<>();
         ArrayList<String> alternateLabels = new ArrayList<>();
@@ -356,13 +356,13 @@ public class Converter {
         } else {
             for (int i = 0; i < designationsNode.size(); i++) {
                 JsonNode node = designationsNode.get(i);
-                checkNodeHasNonNull(node, JsonKeys.TAGS,
-                        String.format("%s/%d/%s", JsonKeys.DESIGNATIONS, i, JsonKeys.TAGS));
-                JsonNode tagsNode = node.get(JsonKeys.TAGS);
+                checkNodeHasNonNull(node, NIHJsonKeys.TAGS,
+                        String.format("%s/%d/%s", NIHJsonKeys.DESIGNATIONS, i, NIHJsonKeys.TAGS));
+                JsonNode tagsNode = node.get(NIHJsonKeys.TAGS);
 
-                checkNodeHasNonNull(node, JsonKeys.DESIGNATION,
-                        String.format("%s/%d/%s", JsonKeys.DESIGNATIONS, i, JsonKeys.DESIGNATION));
-                JsonNode designationNode = node.get(JsonKeys.DESIGNATION);
+                checkNodeHasNonNull(node, NIHJsonKeys.DESIGNATION,
+                        String.format("%s/%d/%s", NIHJsonKeys.DESIGNATIONS, i, NIHJsonKeys.DESIGNATION));
+                JsonNode designationNode = node.get(NIHJsonKeys.DESIGNATION);
                 if (tagsNode.isEmpty()) {
                     String alternateLabel = nodeToCleanedString(designationNode);
                     if (!alternateLabelsSet.contains(alternateLabel)) {
@@ -371,7 +371,7 @@ public class Converter {
                     }
                 } else {
                     List<String> tags = stringListReader.readValue(tagsNode);
-                    if (tags.contains(JsonKeys.PREFERREDQUESTIONTEXT)) {
+                    if (tags.contains(NIHJsonKeys.PREFERREDQUESTIONTEXT)) {
                         preferredLabel = Optional.of(nodeToCleanedString(designationNode));
                     } else {
                         String alternateLabel = nodeToCleanedString(designationNode);
@@ -404,17 +404,17 @@ public class Converter {
      */
     protected CDEConstraints getTextConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
-        JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
-        if (!currentNode.has(JsonKeys.DATATYPETEXT)) {
+        JsonNode currentNode = headNode.get(NIHJsonKeys.VALUEDOMAIN);
+        if (!currentNode.has(NIHJsonKeys.DATATYPETEXT)) {
             return builder.build();
         }
-        currentNode = currentNode.get(JsonKeys.DATATYPETEXT);
+        currentNode = currentNode.get(NIHJsonKeys.DATATYPETEXT);
 
-        if (currentNode.has(JsonKeys.MINLENGTH)) {
-            builder = builder.withMinLength(currentNode.get(JsonKeys.MINLENGTH).intValue());
+        if (currentNode.has(NIHJsonKeys.MINLENGTH)) {
+            builder = builder.withMinLength(currentNode.get(NIHJsonKeys.MINLENGTH).intValue());
         }
-        if (currentNode.has(JsonKeys.MAXLENGTH)) {
-            builder = builder.withMaxLength(currentNode.get(JsonKeys.MAXLENGTH).intValue());
+        if (currentNode.has(NIHJsonKeys.MAXLENGTH)) {
+            builder = builder.withMaxLength(currentNode.get(NIHJsonKeys.MAXLENGTH).intValue());
         }
         return builder.build();
     }
@@ -424,23 +424,23 @@ public class Converter {
      */
     protected CDEConstraints getNumberConstraints(JsonNode headNode) {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
-        JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
-        if (!currentNode.has(JsonKeys.DATATYPENUMBER)) {
+        JsonNode currentNode = headNode.get(NIHJsonKeys.VALUEDOMAIN);
+        if (!currentNode.has(NIHJsonKeys.DATATYPENUMBER)) {
             return builder.build();
         }
-        currentNode = currentNode.get(JsonKeys.DATATYPENUMBER);
+        currentNode = currentNode.get(NIHJsonKeys.DATATYPENUMBER);
 
         // if precision is specified and it is not zero, the min/max values must be double
-        if (currentNode.has(JsonKeys.PRECISION)) {
-            Integer precision = currentNode.get(JsonKeys.PRECISION).intValue();
+        if (currentNode.has(NIHJsonKeys.PRECISION)) {
+            Integer precision = currentNode.get(NIHJsonKeys.PRECISION).intValue();
             builder = builder.withNumericPrecision(precision);
         }
-        if (currentNode.has(JsonKeys.MINVALUE)) {
-            Number minValue = currentNode.get(JsonKeys.MINVALUE).numberValue();
+        if (currentNode.has(NIHJsonKeys.MINVALUE)) {
+            Number minValue = currentNode.get(NIHJsonKeys.MINVALUE).numberValue();
             builder.withMinValue(minValue);
         }
-        if (currentNode.has(JsonKeys.MAXVALUE)) {
-            Number maxValue = currentNode.get(JsonKeys.MAXVALUE).numberValue();
+        if (currentNode.has(NIHJsonKeys.MAXVALUE)) {
+            Number maxValue = currentNode.get(NIHJsonKeys.MAXVALUE).numberValue();
             builder.withMaxValue(maxValue);
         }
         return builder.build();
@@ -451,18 +451,18 @@ public class Converter {
      */
     protected CDEConstraints getDateConstraints(JsonNode headNode) throws InvalidDatePrecisionException {
         CDEConstraints.CDEConstraintsBuilder builder = new CDEConstraints.CDEConstraintsBuilder();
-        JsonNode currentNode = headNode.get(JsonKeys.VALUEDOMAIN);
-        if (!currentNode.has(JsonKeys.DATATYPEDATE)) {
+        JsonNode currentNode = headNode.get(NIHJsonKeys.VALUEDOMAIN);
+        if (!currentNode.has(NIHJsonKeys.DATATYPEDATE)) {
             return builder.build();
         }
-        currentNode = currentNode.get(JsonKeys.DATATYPEDATE);
+        currentNode = currentNode.get(NIHJsonKeys.DATATYPEDATE);
 
-        if (currentNode.has(JsonKeys.PRECISION)) {
-            String precision = nodeToCleanedString(currentNode.get(JsonKeys.PRECISION));
+        if (currentNode.has(NIHJsonKeys.PRECISION)) {
+            String precision = nodeToCleanedString(currentNode.get(NIHJsonKeys.PRECISION));
             if (!JsonDatePrecisions.ALLOWEDDATEPRECISIONS.contains(precision)) {
                 throw new InvalidDatePrecisionException(precision);
             }
-            builder = builder.withDatePrecision(nodeToCleanedString(currentNode.get(JsonKeys.PRECISION)));
+            builder = builder.withDatePrecision(nodeToCleanedString(currentNode.get(NIHJsonKeys.PRECISION)));
         }
         return builder.build();
     }

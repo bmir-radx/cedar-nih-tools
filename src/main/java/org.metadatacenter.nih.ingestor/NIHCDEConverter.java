@@ -65,7 +65,7 @@ public class NIHCDEConverter implements Callable<Integer> {
         // find all the things that need deletion
         ArrayList<String> folders = httpRequester.findFolders(targetFolder);
         System.out.println("Folders: " + folders);
-        ArrayList<String> fields = httpRequester.findFields(folders);
+        ArrayList<String> fields = httpRequester.findFields(folders, false);
         System.out.println("Fields: " + fields);
         System.out.println("Number of Fields: " + fields.size());
         // delete them all
@@ -93,7 +93,7 @@ public class NIHCDEConverter implements Callable<Integer> {
         HttpRequester httpRequester = new HttpRequester(apiKey);
         // find all the things that need deletion
         ArrayList<String> folders = httpRequester.findFolders(targetFolder);
-        ArrayList<String> fields = httpRequester.findFields(folders);
+        ArrayList<String> fields = httpRequester.findFields(folders, true);
         System.out.println("Fields: " + fields);
         System.out.println("Number of Fields: " + fields.size());
         // delete them all

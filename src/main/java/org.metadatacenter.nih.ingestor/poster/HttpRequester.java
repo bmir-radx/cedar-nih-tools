@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.metadatacenter.nih.ingestor.constants.CEDARJsonKeys;
 import org.metadatacenter.nih.ingestor.constants.CEDARResourceTypes;
-import org.metadatacenter.nih.ingestor.constants.JsonKeys;
+import org.metadatacenter.nih.ingestor.constants.NIHJsonKeys;
+import org.metadatacenter.nih.ingestor.constants.RESTJsonKeys;
 import org.metadatacenter.nih.ingestor.exceptions.RESTRequestFailedException;
 
 import java.io.BufferedReader;
@@ -127,11 +129,11 @@ public class HttpRequester {
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 String response = getResponseBody(connection.getInputStream());
-                JsonNode resources = mapper.readTree(response).get(JsonKeys.RESOURCES);
+                JsonNode resources = mapper.readTree(response).get(RESTJsonKeys.RESOURCES);
                 numItemsInLastPage = resources.size();
                 offset += RequestURLPrefixes.SEARCHPAGELIMIT;
                 for (JsonNode node : resources) {
-                    String childFolderId = node.get(JsonKeys.ID).toString();
+                    String childFolderId = node.get(CEDARJsonKeys.ID).toString();
                     String trimmedChildFolderId = childFolderId.substring(1, childFolderId.length() - 1);
                     folders.addAll(findFolders(trimmedChildFolderId));
                 }
@@ -143,17 +145,15 @@ public class HttpRequester {
         return folders;
     }
 
-    public ArrayList<String> findFields(ArrayList<String> folderIds) throws IOException, RESTRequestFailedException {
+    public ArrayList<String> findFields(ArrayList<String> folderIds, boolean ignorePublished) throws IOException, RESTRequestFailedException {
         ArrayList<String> fields = new ArrayList<>();
         for (String folderId : folderIds) {
-            fields.addAll(findFieldsInSingleFolder(folderId));
+            fields.addAll(findFieldsInSingleFolder(folderId, ignorePublished));
         }
         return fields;
     }
 
-
-
-    public ArrayList<String> findFieldsInSingleFolder(String folderId) throws IOException, RESTRequestFailedException {
+    public ArrayList<String> findFieldsInSingleFolder(String folderId, boolean ignorePublished) throws IOException, RESTRequestFailedException {
         ArrayList<String> fields = new ArrayList<>();
         // search folder until pages are exhausted
         int offset = 0;
@@ -165,12 +165,18 @@ public class HttpRequester {
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 String response = getResponseBody(connection.getInputStream());
-                JsonNode resources = mapper.readTree(response).get(JsonKeys.RESOURCES);
+                JsonNode resources = mapper.readTree(response).get(RESTJsonKeys.RESOURCES);
                 numItemsInLastPage = resources.size();
                 offset += RequestURLPrefixes.SEARCHPAGELIMIT;
                 for (JsonNode node : resources) {
-                    String fieldId = node.get(JsonKeys.ID).toString();
-                    fields.add(fieldId.substring(1, fieldId.length() - 1));
+                    String fieldId = node.get(CEDARJsonKeys.ID).toString();
+                    if (ignorePublished) {
+                        String status = node.get(CEDARJsonKeys.STATUS).toString();
+                        status = status.substring(1, status.length() - 1);
+                        if (!status.equals(CEDARJsonKeys.PUBLISHED)) {
+                            fields.add(fieldId.substring(1, fieldId.length() - 1));
+                        }
+                    }
                 }
                 connection.disconnect();
             } else {

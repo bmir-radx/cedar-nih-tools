@@ -4,7 +4,7 @@ package org.metadatacenter.nih.ingestor.constants;
 Constants for each of the Json fields in the NIH CDEs that
 are relevant for CEDAR.
  */
-public class JsonKeys {
+public class NIHJsonKeys {
     // Constants for NIH CDE json fields
     public static final String VALUEDOMAIN = "valueDomain";
     public static final String DATATYPE = "datatype";
@@ -28,10 +28,4 @@ public class JsonKeys {
     public static final String MAXLENGTH = "maxLength";
     public static final String MINVALUE = "minValue";
     public static final String MAXVALUE = "maxValue";
-
-    // constants for CEDAR json fields
-    public static final String ID = "@id";
-
-    // constants for REST response
-    public static final String RESOURCES = "resources";
 }
