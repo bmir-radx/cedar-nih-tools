@@ -37,4 +37,10 @@ public class RetryableRequester {
         CheckedRunnable retryingValidator = Retry.decorateCheckedRunnable(retry, put);
         retryingValidator.run();
     }
+
+    public void publish(String artifactId) throws Throwable {
+        CheckedRunnable publish = () -> httpRequester.publishSingleArtifact(artifactId);
+        CheckedRunnable retryingValidator = Retry.decorateCheckedRunnable(retry, publish);
+        retryingValidator.run();
+    }
 }

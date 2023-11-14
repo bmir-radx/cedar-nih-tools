@@ -102,25 +102,25 @@ public class Converter {
             case DataTypes.TEXT:
                 TextFieldBuilder textBuilder = FieldSchemaArtifact.textFieldBuilder();
                 if (constraints.hasMinLength()) {
-                    textBuilder = textBuilder.withMinLength(constraints.getMinLength());
+                    textBuilder.withMinLength(constraints.getMinLength());
                 }
                 if (constraints.hasMaxLength()) {
-                    textBuilder = textBuilder.withMaxLength(constraints.getMaxLength());
+                    textBuilder.withMaxLength(constraints.getMaxLength());
                 }
                 return textBuilder;
             case DataTypes.NUMBER:
                 NumericFieldBuilder numBuilder = FieldSchemaArtifact.numericFieldBuilder();
                 if (constraints.hasNumericPrecision()) {
-                    numBuilder = numBuilder.withDecimalPlaces(constraints.getNumericPrecision());
+                    numBuilder.withDecimalPlaces(constraints.getNumericPrecision());
                 }
                 if (constraints.hasNumericType()) {
-                    numBuilder = numBuilder.withNumericType(constraints.getNumericType());
+                    numBuilder.withNumericType(constraints.getNumericType());
                 }
                 if (constraints.hasMinValue()) {
-                    numBuilder = numBuilder.withMinValue(constraints.getMinValue());
+                    numBuilder.withMinValue(constraints.getMinValue());
                 }
                 if (constraints.hasMaxValue()) {
-                    numBuilder = numBuilder.withMaxValue(constraints.getMaxValue());
+                    numBuilder.withMaxValue(constraints.getMaxValue());
                 }
                 return numBuilder;
             case DataTypes.DATE:
@@ -128,15 +128,15 @@ public class Converter {
                 if (constraints.hasDatePrecision()) {
                     String datePrecision = constraints.getDatePrecision();
                     if (datePrecision.equals(JsonDatePrecisions.MINUTE)) {
-                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE).
+                        dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE).
                             withTemporalType(TemporalType.DATETIME);
                     } else {
-                        dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
+                        dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
                             withTemporalType(TemporalType.DATE);
                     }
                 } else {
                     // NIH CDE Repository default is Day
-                    dateBuilder = dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
+                    dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
                         withTemporalType(TemporalType.DATE);
                 }
                 return dateBuilder;
@@ -149,9 +149,10 @@ public class Converter {
                 ListFieldBuilder listFieldBuilder = FieldSchemaArtifact.listFieldBuilder();
                 if (constraints.hasPermissibleValues()) {
                     for (String value: constraints.getPermissibleValues()) {
-                        listFieldBuilder = listFieldBuilder.withOption(value);
+                        listFieldBuilder.withOption(value);
                     }
                 }
+                listFieldBuilder.withMultipleChoice(false);
                 return listFieldBuilder;
             default:
                 // will not be reached if valid data type is used

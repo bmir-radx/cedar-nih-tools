@@ -97,7 +97,10 @@ public class NIHCDEConverter implements Callable<Integer> {
         System.out.println("Fields: " + fields);
         System.out.println("Number of Fields: " + fields.size());
         // delete them all
-        httpRequester.publishArtifacts(fields);
+        RetryableRequester retryableRequester = new RetryableRequester(httpRequester, "publish");
+        for (String field: fields) {
+            retryableRequester.publish(field);
+        }
     }
 
     @CommandLine.Command(name = "publish", description = "Publish a field.")
@@ -108,7 +111,8 @@ public class NIHCDEConverter implements Callable<Integer> {
             String fieldId
     ) throws Throwable {
         HttpRequester httpRequester = new HttpRequester(apiKey);
-        httpRequester.publishSingleArtifact(fieldId);
+        RetryableRequester retryableRequester = new RetryableRequester(httpRequester, "publish");
+        retryableRequester.publish(fieldId);
     }
 
     @Override

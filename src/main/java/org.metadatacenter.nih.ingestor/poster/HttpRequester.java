@@ -81,12 +81,6 @@ public class HttpRequester {
         }
     }
 
-    public void publishArtifacts(List<String> artifactIds) throws IOException, RESTRequestFailedException {
-        for (String artifactId: artifactIds) {
-            publishSingleArtifact(artifactId);
-        }
-    }
-
     /*
     Default to publishing as 1.0.0. This should be reviewed.
      */
@@ -176,6 +170,8 @@ public class HttpRequester {
                         if (!status.equals(CEDARJsonKeys.PUBLISHED)) {
                             fields.add(fieldId.substring(1, fieldId.length() - 1));
                         }
+                    } else {
+                        fields.add(fieldId.substring(1, fieldId.length() - 1));
                     }
                 }
                 connection.disconnect();
