@@ -5,6 +5,7 @@ import org.metadatacenter.nih.ingestor.converter.Converter;
 import org.metadatacenter.nih.ingestor.poster.HttpRequester;
 import org.metadatacenter.nih.ingestor.poster.RequestURLPrefixes;
 import org.metadatacenter.nih.ingestor.poster.RetryableRequester;
+import org.metadatacenter.nih.ingestor.writer.JsonWriter;
 import picocli.CommandLine;
 
 import java.util.ArrayList;
@@ -15,6 +16,20 @@ import java.util.concurrent.Callable;
         description = "Convert NIH CDEs to CEDAR format"
 )
 public class NIHCDEConverter implements Callable<Integer> {
+
+    @CommandLine.Command(name = "convert", description = "Convert NIH CDEs to CEDAR format and save to file")
+    public void convert(
+            @CommandLine.Option(names = {"-f", "--file"}, description = "the json file containing NIH CDEs")
+            String filename,
+            @CommandLine.Option(names = {"-o", "--output"}, description = "the json output file containing NIH CDEs in CEDAR format")
+            String output
+    ) throws Throwable {
+        Converter converter = new Converter();
+        JsonWriter writer = new JsonWriter();
+
+        ArrayList<ObjectNode> cedarCDEs = converter.convertCDEsToCEDAR(filename);
+        writer.writeToFile(cedarCDEs, output);
+    }
 
     @CommandLine.Command(name = "validate", description = "Convert NIH CDEs to CEDAR format and validate against CEDAR API")
     public void validate(
