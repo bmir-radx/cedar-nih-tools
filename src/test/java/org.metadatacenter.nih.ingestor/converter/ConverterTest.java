@@ -2,15 +2,13 @@ package org.metadatacenter.nih.ingestor.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.Test;
-import org.metadatacenter.artifacts.model.core.NumericType;
+import org.metadatacenter.artifacts.model.core.fields.XsdNumericDatatype;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
 import org.metadatacenter.nih.ingestor.exceptions.DesignationNotFoundException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidDatePrecisionException;
 import org.metadatacenter.nih.ingestor.exceptions.InvalidJsonPathException;
-import org.metadatacenter.nih.ingestor.exceptions.UnsupportedDataTypeException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -458,7 +456,7 @@ public class ConverterTest {
         Integer refMinValue = 16;
         Integer refMaxValue = 73;
         Integer refPrecision = 0;
-        NumericType refNumericType = NumericType.INTEGER;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.INTEGER;
         String testJson = """
                 {
                     "valueDomain": {
@@ -487,7 +485,7 @@ public class ConverterTest {
     public void testGetNumberConstraints_noPrecision_integer() throws IOException {
         Number refMinValue = 16;
         Number refMaxValue = 73;
-        NumericType refNumericType = NumericType.INTEGER;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.INTEGER;
         String testJson = """
                 {
                     "valueDomain": {
@@ -514,7 +512,7 @@ public class ConverterTest {
     public void testGetNumberConstraints_noPrecision_decimal() throws IOException {
         Number refMinValue = 16;
         Number refMaxValue = 73.3;
-        NumericType refNumericType = NumericType.DECIMAL;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.DECIMAL;
         String testJson = """
                 {
                     "valueDomain": {
@@ -540,7 +538,7 @@ public class ConverterTest {
     @Test
     public void testGetNumberConstraints_noMinValue() throws IOException {
         Number refMaxValue = 73.3;
-        NumericType refNumericType = NumericType.DECIMAL;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.DECIMAL;
         String testJson = """
                 {
                     "valueDomain": {
@@ -564,7 +562,7 @@ public class ConverterTest {
     @Test
     public void testGetNumberConstraints_noMaxValue() throws IOException {
         Number refMinValue = 16;
-        NumericType refNumericType = NumericType.INTEGER;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.INTEGER;
         String testJson = """
                 {
                     "valueDomain": {
@@ -588,7 +586,7 @@ public class ConverterTest {
     @Test
     public void testGetNumberConstraints_noConstraints() throws IOException {
         // default to decimal as numeric type if none specified
-        NumericType refNumericType = NumericType.INTEGER;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.INTEGER;
         String testJson = """
                 {
                     "valueDomain": {
@@ -682,7 +680,7 @@ public class ConverterTest {
         Integer refMinValue = 16;
         Integer refMaxValue = 73;
         Integer refPrecision = 0;
-        NumericType refNumericType = NumericType.INTEGER;
+        XsdNumericDatatype refNumericType = XsdNumericDatatype.INTEGER;
         String testJson = """
                 {
                     "valueDomain": {

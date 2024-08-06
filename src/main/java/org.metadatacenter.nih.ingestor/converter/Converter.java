@@ -6,14 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metadatacenter.artifacts.model.core.FieldSchemaArtifact;
-import org.metadatacenter.artifacts.model.core.TemporalGranularity;
-import org.metadatacenter.artifacts.model.core.TemporalType;
+import org.metadatacenter.artifacts.model.core.fields.TemporalGranularity;
+import org.metadatacenter.artifacts.model.core.fields.XsdTemporalDatatype;
 import org.metadatacenter.artifacts.model.core.Version;
-import org.metadatacenter.artifacts.model.core.builders.FieldSchemaArtifactBuilder;
-import org.metadatacenter.artifacts.model.core.builders.ListFieldBuilder;
-import org.metadatacenter.artifacts.model.core.builders.NumericFieldBuilder;
-import org.metadatacenter.artifacts.model.core.builders.TemporalFieldBuilder;
-import org.metadatacenter.artifacts.model.core.builders.TextFieldBuilder;
+import org.metadatacenter.artifacts.model.core.ListField.ListFieldBuilder;
+import org.metadatacenter.artifacts.model.core.NumericField.NumericFieldBuilder;
+import org.metadatacenter.artifacts.model.core.TemporalField.TemporalFieldBuilder;
+import org.metadatacenter.artifacts.model.core.TextField.TextFieldBuilder;
 import org.metadatacenter.artifacts.model.renderer.JsonSchemaArtifactRenderer;
 import org.metadatacenter.nih.ingestor.constants.DataTypes;
 import org.metadatacenter.nih.ingestor.constants.JsonDatePrecisions;
@@ -67,8 +66,10 @@ public class Converter {
 
     /*
     Builds a FieldSchemaArtifact using the cedar-artifact-library using the provided information.
+    Select the appropriate builder from the cedar-artifact-library for the
+    response datatype specified by the CDE.
      */
-    private FieldSchemaArtifact makeCedarArtifact(String inputType,
+    private FieldSchemaArtifact makeCedarArtifact(String datatype,
                                                   CDEConstraints constraints,
                                                   String tinyId,
                                                   Version version,
@@ -77,39 +78,27 @@ public class Converter {
                                                   List<String> alternateLabels,
                                                   String name)
             throws UnsupportedDataTypeException {
-
-        FieldSchemaArtifactBuilder builder = chooseBuilderByDataType(inputType, constraints);
-        if (definition.isPresent()) {
-            builder = builder.withDescription(definition.get());
-        }
-        return builder.withName(name).
-                withIdentifier(tinyId).
-                // withVersion(version).
-                withPreferredLabel(preferredLabel).
-                withAlternateLabels(alternateLabels).
-                build();
-    }
-
-    /*
-    Select the appropriate builder from the cedar-artifact-library for the
-    response datatype specified by the CDE.
-     */
-    private FieldSchemaArtifactBuilder chooseBuilderByDataType(String datatype, CDEConstraints constraints)
-            throws UnsupportedDataTypeException {
         switch (datatype) {
             case DataTypes.FILE:
             case DataTypes.EXTERNALLYDEFINED:
             case DataTypes.TEXT:
-                TextFieldBuilder textBuilder = FieldSchemaArtifact.textFieldBuilder();
+                TextFieldBuilder textBuilder = new TextFieldBuilder();
                 if (constraints.hasMinLength()) {
                     textBuilder.withMinLength(constraints.getMinLength());
                 }
                 if (constraints.hasMaxLength()) {
                     textBuilder.withMaxLength(constraints.getMaxLength());
                 }
-                return textBuilder;
+                if (definition.isPresent()) {
+                    textBuilder = textBuilder.withDescription(definition.get());
+                }
+                return textBuilder.withName(name).
+                        withIdentifier(tinyId).
+                        withPreferredLabel(preferredLabel).
+                        withAlternateLabels(alternateLabels).
+                        build();
             case DataTypes.NUMBER:
-                NumericFieldBuilder numBuilder = FieldSchemaArtifact.numericFieldBuilder();
+                NumericFieldBuilder numBuilder = new NumericFieldBuilder();
                 if (constraints.hasNumericPrecision()) {
                     numBuilder.withDecimalPlaces(constraints.getNumericPrecision());
                 }
@@ -122,38 +111,53 @@ public class Converter {
                 if (constraints.hasMaxValue()) {
                     numBuilder.withMaxValue(constraints.getMaxValue());
                 }
-                return numBuilder;
+                if (definition.isPresent()) {
+                    numBuilder = numBuilder.withDescription(definition.get());
+                }
+                return numBuilder.withName(name).
+                        withIdentifier(tinyId).
+                        withPreferredLabel(preferredLabel).
+                        withAlternateLabels(alternateLabels).
+                        build();
             case DataTypes.DATE:
-                TemporalFieldBuilder dateBuilder = FieldSchemaArtifact.temporalFieldBuilder();
+                TemporalFieldBuilder dateBuilder = new TemporalFieldBuilder();
                 if (constraints.hasDatePrecision()) {
                     String datePrecision = constraints.getDatePrecision();
                     if (datePrecision.equals(JsonDatePrecisions.MINUTE)) {
                         dateBuilder.withTemporalGranularity(TemporalGranularity.MINUTE).
-                            withTemporalType(TemporalType.DATETIME);
+                            withTemporalType(XsdTemporalDatatype.DATETIME);
                     } else {
                         dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
-                            withTemporalType(TemporalType.DATE);
+                            withTemporalType(XsdTemporalDatatype.DATE);
                     }
                 } else {
                     // NIH CDE Repository default is Day
                     dateBuilder.withTemporalGranularity(TemporalGranularity.DAY).
-                        withTemporalType(TemporalType.DATE);
+                        withTemporalType(XsdTemporalDatatype.DATE);
                 }
-                return dateBuilder;
+                if (definition.isPresent()) {
+                    dateBuilder = dateBuilder.withDescription(definition.get());
+                }
+                return dateBuilder.withName(name).
+                        withIdentifier(tinyId).
+                        withPreferredLabel(preferredLabel).
+                        withAlternateLabels(alternateLabels).
+                        build();
             case DataTypes.TIME:
                 // assumed minute. nothing in the CDE indicates time granularity.
-                return FieldSchemaArtifact.temporalFieldBuilder().
-                        withTemporalType(TemporalType.TIME).
-                        withTemporalGranularity(TemporalGranularity.MINUTE);
+                return new TemporalFieldBuilder().
+                        withTemporalType(XsdTemporalDatatype.TIME).
+                        withTemporalGranularity(TemporalGranularity.MINUTE).
+                        build();
             case DataTypes.VALUELIST:
-                ListFieldBuilder listFieldBuilder = FieldSchemaArtifact.listFieldBuilder();
+                ListFieldBuilder listFieldBuilder = new ListFieldBuilder();
                 if (constraints.hasPermissibleValues()) {
                     for (String value: constraints.getPermissibleValues()) {
                         listFieldBuilder.withOption(value);
                     }
                 }
-                listFieldBuilder.withMultipleChoice(false);
-                return listFieldBuilder;
+                listFieldBuilder.withIsMultiple(false);
+                return listFieldBuilder.build();
             default:
                 // will not be reached if valid data type is used
                 throw new UnsupportedDataTypeException(datatype);

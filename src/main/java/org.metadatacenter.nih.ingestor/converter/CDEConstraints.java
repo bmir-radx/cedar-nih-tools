@@ -1,6 +1,6 @@
 package org.metadatacenter.nih.ingestor.converter;
 
-import org.metadatacenter.artifacts.model.core.NumericType;
+import org.metadatacenter.artifacts.model.core.fields.XsdNumericDatatype;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -14,7 +14,7 @@ public class CDEConstraints {
     private Optional<Number> minValue;
     private Optional<Number> maxValue;
     private Optional<Integer> numericPrecision; // 0, 1, 2, 3, 4
-    private Optional<NumericType> numericType;
+    private Optional<XsdNumericDatatype> numericType;
 
     public CDEConstraints(Optional<String> datePrecision,
                           Optional<ArrayList<String>> permissibleValues,
@@ -23,7 +23,7 @@ public class CDEConstraints {
                           Optional<Number> minValue,
                           Optional<Number> maxValue,
                           Optional<Integer> numericPrecision,
-                          Optional<NumericType> numericType) {
+                          Optional<XsdNumericDatatype> numericType) {
         this.datePrecision = datePrecision;
         this.permissibleValues = permissibleValues;
         this.minLength = minLength;
@@ -70,7 +70,7 @@ public class CDEConstraints {
         return numericType.isPresent();
     }
 
-    public NumericType getNumericType() {
+    public XsdNumericDatatype getNumericType() {
         return numericType.get();
     }
 
@@ -142,20 +142,20 @@ public class CDEConstraints {
             return this;
         }
 
-        private NumericType determineNumericType() {
-            NumericType numericType;
+        private XsdNumericDatatype determineNumericType() {
+            XsdNumericDatatype numericType;
             if (numericPrecision.isPresent()) {
                 if (numericPrecision.get() > 0) {
-                    numericType = NumericType.DECIMAL;
+                    numericType = XsdNumericDatatype.DECIMAL;
                 } else {
-                    numericType = NumericType.INTEGER;
+                    numericType = XsdNumericDatatype.INTEGER;
                 }
             } else {
                 if ((minValue.isPresent() && minValue.get().doubleValue() % 1 != 0) ||
                         (maxValue.isPresent() && maxValue.get().doubleValue() % 1 != 0)) {
-                    numericType = NumericType.DECIMAL;
+                    numericType = XsdNumericDatatype.DECIMAL;
                 } else {
-                    numericType = NumericType.INTEGER;
+                    numericType = XsdNumericDatatype.INTEGER;
                 }
             }
             return numericType;
