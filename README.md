@@ -6,7 +6,8 @@ There is a button to export CDEs on the website.
 
 Build the package with the following command:
 ```
-mvn clean compile assembly:single
+mvn clean package assembly:single
+mvn install:install-file -Dfile=target/cedar-nih-tools-$VERSION-SNAPSHOT-jar-with-dependencies.jar -DgroupId=org.metadatacenter -DartifactId=cedar-nih_tools -Dversion=$VERSION-SNAPSHOT -Dpackaging=jar
 ```
 
 This produces `./target/cedar-nih-tools-<VERSION>-SNAPSHOT-jar-with-dependencies.jar`.
